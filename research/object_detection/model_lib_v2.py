@@ -23,6 +23,9 @@ import os
 import time
 import numpy as np
 
+from tensorflow.keras.backend import count_params
+from fruitod.utils.csv_util import write_metrics
+
 import tensorflow.compat.v1 as tf
 import tensorflow.compat.v2 as tf2
 
@@ -156,7 +159,8 @@ def eager_train_step(detection_model,
                      add_regularization_loss=True,
                      clip_gradients_value=None,
                      global_step=None,
-                     num_replicas=1.0):
+                     num_replicas=1.0,
+                     num_visualization=0):
   """Process a single training batch.
 
   This method computes the loss for the model on a single training batch,
@@ -272,11 +276,12 @@ def eager_train_step(detection_model,
     gradients, _ = tf.clip_by_global_norm(gradients, clip_gradients_value)
   optimizer.apply_gradients(zip(gradients, trainable_variables))
   tf.compat.v2.summary.scalar('learning_rate', learning_rate, step=global_step)
-  tf.compat.v2.summary.image(
-      name='train_input_images',
-      step=global_step,
-      data=features[fields.InputDataFields.image],
-      max_outputs=3)
+  if num_visualization > 0:
+    tf.compat.v2.summary.image(
+        name='train_input_images',
+        step=global_step,
+        data=features[fields.InputDataFields.image],
+        max_outputs=num_visualization)
   return total_loss
 
 
@@ -688,6 +693,16 @@ def train_loop(
     mixed_precision = 'bf16' if kwargs['use_bfloat16'] else 'fp32'
     performance_summary_exporter(metrics, mixed_precision)
 
+  ## Get Number of Parameters and Flops of the model
+  trainable_params = int(np.sum([count_params(p) for p in detection_model.trainable_weights]))
+  non_trainable_params = int(np.sum([count_params(p) for p in detection_model.non_trainable_weights]))
+  total_params = trainable_params + non_trainable_params
+
+  ## Write Params to Dataframe/CSV
+  head, tail = os.path.split(str(model_dir))
+  metrics = {'Parameter': total_params}
+  write_metrics(head, metrics)
+
 
 def prepare_eval_dict(detections, groundtruth, features):
   """Prepares eval dictionary containing detections and groundtruth.
@@ -1087,15 +1102,14 @@ def eval_continuously(
   optimizer, _ = optimizer_builder.build(
       configs['train_config'].optimizer, global_step=global_step)
 
-  for latest_checkpoint in tf.train.checkpoints_iterator(
-      checkpoint_dir, timeout=timeout, min_interval_secs=wait_interval):
-    ckpt = tf.compat.v2.train.Checkpoint(
-        step=global_step, model=detection_model, optimizer=optimizer)
+  for checkpoint in tf.compat.v2.train.get_checkpoint_state(checkpoint_dir).all_model_checkpoint_paths:
+    ckpt = tf.compat.v2.train.Checkpoint(step=global_step, model=detection_model)
 
     if eval_config.use_moving_averages:
       optimizer.shadow_copy(detection_model)
 
-    ckpt.restore(latest_checkpoint).expect_partial()
+    ckpt.restore(checkpoint).expect_partial()
+    tf.logging.info('Evaluate Checkpoint {}'.format(checkpoint))
 
     if eval_config.use_moving_averages:
       optimizer.swap_weights()
@@ -1103,10 +1117,14 @@ def eval_continuously(
     summary_writer = tf.compat.v2.summary.create_file_writer(
         os.path.join(model_dir, 'eval', eval_input_config.name))
     with summary_writer.as_default():
-      eager_eval_loop(
+      eval_metrics = eager_eval_loop(
           detection_model,
           configs,
           eval_input,
           use_tpu=use_tpu,
           postprocess_on_cpu=postprocess_on_cpu,
           global_step=global_step)
+
+      ## Write Metrics to Dataframe/CSV
+      head, tail = os.path.split(str(model_dir))
+      write_metrics(head, eval_metrics)

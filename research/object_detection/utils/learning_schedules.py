@@ -21,6 +21,7 @@ import numpy as np
 from six.moves import range
 from six.moves import zip
 import tensorflow.compat.v1 as tf
+import math
 
 
 def _learning_rate_return_value(eager_decay_rate):
@@ -204,6 +205,34 @@ def cosine_decay_with_warmup(global_step,
                                learning_rate)
     return tf.where(global_step > total_steps, 0.0, learning_rate,
                     name='learning_rate')
+
+  return _learning_rate_return_value(eager_decay_rate)
+
+
+def cosine_decay_with_restarts(global_step,
+                               initial_learning_rate,
+                               first_decay_steps,
+                               t_mul=2.0,
+                               m_mul=1.0,
+                               alpha=0.0):
+  def eager_decay_rate():
+    completed_fraction = tf.cast(global_step / first_decay_steps, tf.float32)
+
+    if t_mul == 1.0:
+      i_restart = tf.floor(completed_fraction)
+      completed_fraction -= i_restart
+    else:
+      i_restart = tf.floor(tf.log(1.0 - completed_fraction * (1.0 - t_mul)) /
+                           tf.log(t_mul))
+      sum_r = (1.0 - t_mul ** i_restart) / (1.0 - t_mul)
+      completed_fraction = (completed_fraction - sum_r) / t_mul ** i_restart
+
+    m_fac = m_mul ** i_restart
+    cosine_decayed = 0.5 * m_fac * (1.0 + tf.cos(np.pi * completed_fraction))
+    decayed = (1 - alpha) * cosine_decayed + alpha
+    learning_rate = tf.multiply(initial_learning_rate, decayed)
+
+    return learning_rate
 
   return _learning_rate_return_value(eager_decay_rate)
 
