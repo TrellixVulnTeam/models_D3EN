@@ -17,7 +17,7 @@ REQUIRED_PACKAGES = [
     'contextlib2',
     'tf-slim',
     'six',
-    'pycocotools',
+    'pycocotools @ git+https://github.com/nilskk/cocoapi.git#subdirectory=PythonAPI',
     'lvis',
     'scipy',
     'pandas',
