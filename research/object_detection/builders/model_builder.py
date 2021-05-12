@@ -32,6 +32,7 @@ from object_detection.core import target_assigner
 from object_detection.meta_architectures import center_net_meta_arch
 from object_detection.meta_architectures import context_rcnn_meta_arch
 from object_detection.meta_architectures import faster_rcnn_meta_arch
+from object_detection.meta_architectures import probabilistic_two_stage_meta_arch
 from object_detection.meta_architectures import rfcn_meta_arch
 from object_detection.meta_architectures import ssd_meta_arch
 from object_detection.predictors.heads import mask_head
@@ -64,6 +65,7 @@ if tf_version.is_tf2():
   from object_detection.predictors import rfcn_keras_box_predictor
   if sys.version_info[0] >= 3:
     from object_detection.models import ssd_efficientnet_bifpn_feature_extractor as ssd_efficientnet_bifpn
+  from object_detection.models import prob_two_stage_efficientnet_bifpn_feature_extractor
 
 if tf_version.is_tf1():
   from object_detection.models import faster_rcnn_inception_resnet_v2_feature_extractor as frcnn_inc_res
@@ -140,6 +142,11 @@ if tf_version.is_tf2():
           frcnn_resnet_fpn_keras.FasterRCNNResnet152FpnKerasFeatureExtractor,
   }
 
+  PROBABILITY_TWO_STAGE_KERAS_FEATURE_EXTRACTOR_CLASS_MAP ={
+    'prob_two_stage_efficientdet_d0_bifpn_keras':
+      prob_two_stage_efficientnet_bifpn_feature_extractor.ProbabilisticTwoStageEfficientNetB0BiFPNKerasFeatureExtractor
+  }
+
   CENTER_NET_EXTRACTOR_FUNCTION_MAP = {
       'resnet_v2_50':
           center_net_resnet_feature_extractor.resnet_v2_50,
@@ -167,7 +174,8 @@ if tf_version.is_tf2():
   FEATURE_EXTRACTOR_MAPS = [
       CENTER_NET_EXTRACTOR_FUNCTION_MAP,
       FASTER_RCNN_KERAS_FEATURE_EXTRACTOR_CLASS_MAP,
-      SSD_KERAS_FEATURE_EXTRACTOR_CLASS_MAP
+      SSD_KERAS_FEATURE_EXTRACTOR_CLASS_MAP,
+      PROBABILITY_TWO_STAGE_KERAS_FEATURE_EXTRACTOR_CLASS_MAP
   ]
 
 if tf_version.is_tf1():
@@ -813,6 +821,268 @@ def _build_faster_rcnn_model(frcnn_config, is_training, add_summaries):
 EXPERIMENTAL_META_ARCH_BUILDER_MAP = {
 }
 
+def _build_prob_two_stage_keras_feature_extractor(
+    feature_extractor_config, is_training,
+    inplace_batchnorm_update=False):
+  """Builds a faster_rcnn_meta_arch.FasterRCNNKerasFeatureExtractor from config.
+
+  Args:
+    feature_extractor_config: A FasterRcnnFeatureExtractor proto config from
+      faster_rcnn.proto.
+    is_training: True if this feature extractor is being built for training.
+    inplace_batchnorm_update: Whether to update batch_norm inplace during
+      training. This is required for batch norm to work correctly on TPUs. When
+      this is false, user must add a control dependency on
+      tf.GraphKeys.UPDATE_OPS for train/loss op in order to update the batch
+      norm moving average parameters.
+
+  Returns:
+    faster_rcnn_meta_arch.FasterRCNNKerasFeatureExtractor based on config.
+
+  Raises:
+    ValueError: On invalid feature extractor type.
+  """
+  if inplace_batchnorm_update:
+    raise ValueError('inplace batchnorm updates not supported.')
+  feature_type = feature_extractor_config.type
+  first_stage_features_stride = (
+      feature_extractor_config.first_stage_features_stride)
+
+  if feature_type not in PROBABILITY_TWO_STAGE_KERAS_FEATURE_EXTRACTOR_CLASS_MAP:
+    raise ValueError('Unknown Probability Two Stage feature_extractor: {}'.format(
+        feature_type))
+  feature_extractor_class = PROBABILITY_TWO_STAGE_KERAS_FEATURE_EXTRACTOR_CLASS_MAP[
+      feature_type]
+
+  kwargs = {}
+
+  kwargs.update({
+    'min_depth':
+          feature_extractor_config.min_depth,
+    'freeze_batchnorm':
+        feature_extractor_config.freeze_batchnorm
+  })
+
+  if feature_extractor_config.HasField('conv_hyperparams'):
+    kwargs.update({
+        'conv_hyperparams':
+            hyperparams_builder.KerasLayerHyperparams(
+                feature_extractor_config.conv_hyperparams)
+    })
+
+  if feature_extractor_config.HasField('bifpn'):
+    kwargs.update({
+      'bifpn_min_level': feature_extractor_config.bifpn.min_level,
+      'bifpn_max_level': feature_extractor_config.bifpn.max_level,
+      'bifpn_num_iterations': feature_extractor_config.bifpn.num_iterations,
+      'bifpn_num_filters': feature_extractor_config.bifpn.num_filters,
+      'bifpn_combine_method': feature_extractor_config.bifpn.combine_method,
+    })
+
+  return feature_extractor_class(
+      is_training=is_training, first_stage_features_stride=first_stage_features_stride, **kwargs)
+
+def _build_prob_two_stage_model(prob_two_stage_config, is_training, add_summaries):
+  """Builds a Faster R-CNN or R-FCN detection model based on the model config.
+
+  Builds R-FCN model if the second_stage_box_predictor in the config is of type
+  `rfcn_box_predictor` else builds a Faster R-CNN model.
+
+  Args:
+    frcnn_config: A faster_rcnn.proto object containing the config for the
+      desired FasterRCNNMetaArch or RFCNMetaArch.
+    is_training: True if this model is being built for training purposes.
+    add_summaries: Whether to add tf summaries in the model.
+
+  Returns:
+    FasterRCNNMetaArch based on the config.
+
+  Raises:
+    ValueError: If frcnn_config.type is not recognized (i.e. not registered in
+      model_class_map).
+  """
+  num_classes = prob_two_stage_config.num_classes
+  image_resizer_fn = image_resizer_builder.build(prob_two_stage_config.image_resizer)
+  _check_feature_extractor_exists(prob_two_stage_config.feature_extractor.type)
+  is_keras = tf_version.is_tf2()
+
+  if is_keras:
+    feature_extractor = _build_prob_two_stage_keras_feature_extractor(
+        prob_two_stage_config.feature_extractor, is_training,
+        inplace_batchnorm_update=prob_two_stage_config.inplace_batchnorm_update)
+
+  number_of_stages = prob_two_stage_config.number_of_stages
+  first_stage_anchor_generator = anchor_generator_builder.build(
+      prob_two_stage_config.first_stage_anchor_generator)
+
+  first_stage_target_assigner = target_assigner.create_target_assigner(
+      'FasterRCNN',
+      'proposal',
+      use_matmul_gather=prob_two_stage_config.use_matmul_gather_in_matcher)
+  first_stage_atrous_rate = prob_two_stage_config.first_stage_atrous_rate
+  if is_keras:
+    first_stage_box_predictor = box_predictor_builder.build_keras(
+        hyperparams_builder.KerasLayerHyperparams,
+        freeze_batchnorm=False,
+        inplace_batchnorm_update=False,
+        num_predictions_per_location_list=first_stage_anchor_generator.num_anchors_per_location(),
+        box_predictor_config=prob_two_stage_config.first_stage_box_predictor,
+        is_training=is_training,
+        num_classes=1)
+  first_stage_minibatch_size = prob_two_stage_config.first_stage_minibatch_size
+  use_static_shapes = prob_two_stage_config.use_static_shapes and (
+      prob_two_stage_config.use_static_shapes_for_eval or is_training)
+  first_stage_sampler = sampler.BalancedPositiveNegativeSampler(
+      positive_fraction=prob_two_stage_config.first_stage_positive_balance_fraction,
+      is_static=(prob_two_stage_config.use_static_balanced_label_sampler and
+                 use_static_shapes))
+  first_stage_max_proposals = prob_two_stage_config.first_stage_max_proposals
+  if (prob_two_stage_config.first_stage_nms_iou_threshold < 0 or
+      prob_two_stage_config.first_stage_nms_iou_threshold > 1.0):
+    raise ValueError('iou_threshold not in [0, 1.0].')
+  if (is_training and prob_two_stage_config.second_stage_batch_size >
+      first_stage_max_proposals):
+    raise ValueError('second_stage_batch_size should be no greater than '
+                     'first_stage_max_proposals.')
+  first_stage_non_max_suppression_fn = functools.partial(
+      post_processing.batch_multiclass_non_max_suppression,
+      score_thresh=prob_two_stage_config.first_stage_nms_score_threshold,
+      iou_thresh=prob_two_stage_config.first_stage_nms_iou_threshold,
+      max_size_per_class=prob_two_stage_config.first_stage_max_proposals,
+      max_total_size=prob_two_stage_config.first_stage_max_proposals,
+      use_static_shapes=use_static_shapes,
+      use_partitioned_nms=prob_two_stage_config.use_partitioned_nms_in_first_stage,
+      use_combined_nms=prob_two_stage_config.use_combined_nms_in_first_stage)
+  first_stage_loc_loss_weight = (
+      prob_two_stage_config.first_stage_localization_loss_weight)
+  first_stage_obj_loss_weight = prob_two_stage_config.first_stage_objectness_loss_weight
+
+  initial_crop_size = prob_two_stage_config.initial_crop_size
+  maxpool_kernel_size = prob_two_stage_config.maxpool_kernel_size
+  maxpool_stride = prob_two_stage_config.maxpool_stride
+
+  second_stage_target_assigner = target_assigner.create_target_assigner(
+      'FasterRCNN',
+      'detection',
+      use_matmul_gather=prob_two_stage_config.use_matmul_gather_in_matcher)
+  if is_keras:
+    second_stage_box_predictor = box_predictor_builder.build_keras(
+        hyperparams_builder.KerasLayerHyperparams,
+        freeze_batchnorm=False,
+        inplace_batchnorm_update=False,
+        num_predictions_per_location_list=[1],
+        box_predictor_config=prob_two_stage_config.second_stage_box_predictor,
+        is_training=is_training,
+        num_classes=num_classes)
+  second_stage_batch_size = prob_two_stage_config.second_stage_batch_size
+  second_stage_sampler = sampler.BalancedPositiveNegativeSampler(
+      positive_fraction=prob_two_stage_config.second_stage_balance_fraction,
+      is_static=(prob_two_stage_config.use_static_balanced_label_sampler and
+                 use_static_shapes))
+  (second_stage_non_max_suppression_fn, second_stage_score_conversion_fn
+  ) = post_processing_builder.build(prob_two_stage_config.second_stage_post_processing)
+  second_stage_localization_loss_weight = (
+      prob_two_stage_config.second_stage_localization_loss_weight)
+  second_stage_classification_loss = (
+      losses_builder.build_faster_rcnn_classification_loss(
+          prob_two_stage_config.second_stage_classification_loss))
+  second_stage_classification_loss_weight = (
+      prob_two_stage_config.second_stage_classification_loss_weight)
+  second_stage_mask_prediction_loss_weight = (
+      prob_two_stage_config.second_stage_mask_prediction_loss_weight)
+
+  hard_example_miner = None
+  if prob_two_stage_config.HasField('hard_example_miner'):
+    hard_example_miner = losses_builder.build_hard_example_miner(
+        prob_two_stage_config.hard_example_miner,
+        second_stage_classification_loss_weight,
+        second_stage_localization_loss_weight)
+
+  crop_and_resize_fn = (
+      spatial_ops.multilevel_matmul_crop_and_resize
+      if prob_two_stage_config.use_matmul_crop_and_resize
+      else spatial_ops.multilevel_native_crop_and_resize)
+  clip_anchors_to_image = (
+      prob_two_stage_config.clip_anchors_to_image)
+
+  common_kwargs = {
+      'is_training':
+          is_training,
+      'num_classes':
+          num_classes,
+      'image_resizer_fn':
+          image_resizer_fn,
+      'feature_extractor':
+          feature_extractor,
+      'number_of_stages':
+          number_of_stages,
+      'first_stage_anchor_generator':
+          first_stage_anchor_generator,
+      'first_stage_target_assigner':
+          first_stage_target_assigner,
+      'first_stage_atrous_rate':
+          first_stage_atrous_rate,
+      'first_stage_box_predictor':
+          first_stage_box_predictor,
+      'first_stage_minibatch_size':
+          first_stage_minibatch_size,
+      'first_stage_sampler':
+          first_stage_sampler,
+      'first_stage_non_max_suppression_fn':
+          first_stage_non_max_suppression_fn,
+      'first_stage_max_proposals':
+          first_stage_max_proposals,
+      'first_stage_localization_loss_weight':
+          first_stage_loc_loss_weight,
+      'first_stage_objectness_loss_weight':
+          first_stage_obj_loss_weight,
+      'second_stage_target_assigner':
+          second_stage_target_assigner,
+      'second_stage_batch_size':
+          second_stage_batch_size,
+      'second_stage_sampler':
+          second_stage_sampler,
+      'second_stage_non_max_suppression_fn':
+          second_stage_non_max_suppression_fn,
+      'second_stage_score_conversion_fn':
+          second_stage_score_conversion_fn,
+      'second_stage_localization_loss_weight':
+          second_stage_localization_loss_weight,
+      'second_stage_classification_loss':
+          second_stage_classification_loss,
+      'second_stage_classification_loss_weight':
+          second_stage_classification_loss_weight,
+      'hard_example_miner':
+          hard_example_miner,
+      'add_summaries':
+          add_summaries,
+      'crop_and_resize_fn':
+          crop_and_resize_fn,
+      'clip_anchors_to_image':
+          clip_anchors_to_image,
+      'use_static_shapes':
+          use_static_shapes,
+      'resize_masks':
+          prob_two_stage_config.resize_masks,
+      'return_raw_detections_during_predict':
+          prob_two_stage_config.return_raw_detections_during_predict,
+      'output_final_box_features':
+          prob_two_stage_config.output_final_box_features,
+      'output_final_box_rpn_features':
+          prob_two_stage_config.output_final_box_rpn_features,
+  }
+
+  return probabilistic_two_stage_meta_arch.ProbabilisticTwoStageMetaArch(
+      initial_crop_size=initial_crop_size,
+      maxpool_kernel_size=maxpool_kernel_size,
+      maxpool_stride=maxpool_stride,
+      second_stage_mask_rcnn_box_predictor=second_stage_box_predictor,
+      second_stage_mask_prediction_loss_weight=(
+          second_stage_mask_prediction_loss_weight),
+      **common_kwargs)
+
+EXPERIMENTAL_META_ARCH_BUILDER_MAP = {
+}
 
 def _build_experimental_model(config, is_training, add_summaries=True):
   return EXPERIMENTAL_META_ARCH_BUILDER_MAP[config.name](
@@ -1080,7 +1350,8 @@ META_ARCH_BUILDER_MAP = {
     'ssd': _build_ssd_model,
     'faster_rcnn': _build_faster_rcnn_model,
     'experimental_model': _build_experimental_model,
-    'center_net': _build_center_net_model
+    'center_net': _build_center_net_model,
+    'prob_two_stage': _build_prob_two_stage_model
 }
 
 

@@ -15,6 +15,7 @@ _sym_db = _symbol_database.Default()
 from object_detection.protos import center_net_pb2 as object__detection_dot_protos_dot_center__net__pb2
 from object_detection.protos import faster_rcnn_pb2 as object__detection_dot_protos_dot_faster__rcnn__pb2
 from object_detection.protos import ssd_pb2 as object__detection_dot_protos_dot_ssd__pb2
+from object_detection.protos import prob_two_stage_pb2 as object__detection_dot_protos_dot_prob__two__stage__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(
@@ -22,9 +23,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='object_detection.protos',
   syntax='proto2',
   serialized_options=None,
-  serialized_pb=_b('\n#object_detection/protos/model.proto\x12\x17object_detection.protos\x1a(object_detection/protos/center_net.proto\x1a)object_detection/protos/faster_rcnn.proto\x1a!object_detection/protos/ssd.proto\"\x96\x02\n\x0e\x44\x65tectionModel\x12:\n\x0b\x66\x61ster_rcnn\x18\x01 \x01(\x0b\x32#.object_detection.protos.FasterRcnnH\x00\x12+\n\x03ssd\x18\x02 \x01(\x0b\x32\x1c.object_detection.protos.SsdH\x00\x12H\n\x12\x65xperimental_model\x18\x03 \x01(\x0b\x32*.object_detection.protos.ExperimentalModelH\x00\x12\x38\n\ncenter_net\x18\x04 \x01(\x0b\x32\".object_detection.protos.CenterNetH\x00\x12\x0e\n\x04name\x18\x05 \x01(\t:\x00\x42\x07\n\x05model\"!\n\x11\x45xperimentalModel\x12\x0c\n\x04name\x18\x01 \x01(\t')
+  serialized_pb=_b('\n#object_detection/protos/model.proto\x12\x17object_detection.protos\x1a(object_detection/protos/center_net.proto\x1a)object_detection/protos/faster_rcnn.proto\x1a!object_detection/protos/ssd.proto\x1a,object_detection/protos/prob_two_stage.proto\"\xe0\x02\n\x0e\x44\x65tectionModel\x12:\n\x0b\x66\x61ster_rcnn\x18\x01 \x01(\x0b\x32#.object_detection.protos.FasterRcnnH\x00\x12+\n\x03ssd\x18\x02 \x01(\x0b\x32\x1c.object_detection.protos.SsdH\x00\x12H\n\x12\x65xperimental_model\x18\x03 \x01(\x0b\x32*.object_detection.protos.ExperimentalModelH\x00\x12\x38\n\ncenter_net\x18\x04 \x01(\x0b\x32\".object_detection.protos.CenterNetH\x00\x12H\n\x0eprob_two_stage\x18\x06 \x01(\x0b\x32..object_detection.protos.ProbabilisticTwoStageH\x00\x12\x0e\n\x04name\x18\x05 \x01(\t:\x00\x42\x07\n\x05model\"!\n\x11\x45xperimentalModel\x12\x0c\n\x04name\x18\x01 \x01(\t')
   ,
-  dependencies=[object__detection_dot_protos_dot_center__net__pb2.DESCRIPTOR,object__detection_dot_protos_dot_faster__rcnn__pb2.DESCRIPTOR,object__detection_dot_protos_dot_ssd__pb2.DESCRIPTOR,])
+  dependencies=[object__detection_dot_protos_dot_center__net__pb2.DESCRIPTOR,object__detection_dot_protos_dot_faster__rcnn__pb2.DESCRIPTOR,object__detection_dot_protos_dot_ssd__pb2.DESCRIPTOR,object__detection_dot_protos_dot_prob__two__stage__pb2.DESCRIPTOR,])
 
 
 
@@ -65,7 +66,14 @@ _DETECTIONMODEL = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='name', full_name='object_detection.protos.DetectionModel.name', index=4,
+      name='prob_two_stage', full_name='object_detection.protos.DetectionModel.prob_two_stage', index=4,
+      number=6, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='name', full_name='object_detection.protos.DetectionModel.name', index=5,
       number=5, type=9, cpp_type=9, label=1,
       has_default_value=True, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
@@ -86,8 +94,8 @@ _DETECTIONMODEL = _descriptor.Descriptor(
       name='model', full_name='object_detection.protos.DetectionModel.model',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=185,
-  serialized_end=463,
+  serialized_start=231,
+  serialized_end=583,
 )
 
 
@@ -117,14 +125,15 @@ _EXPERIMENTALMODEL = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=465,
-  serialized_end=498,
+  serialized_start=585,
+  serialized_end=618,
 )
 
 _DETECTIONMODEL.fields_by_name['faster_rcnn'].message_type = object__detection_dot_protos_dot_faster__rcnn__pb2._FASTERRCNN
 _DETECTIONMODEL.fields_by_name['ssd'].message_type = object__detection_dot_protos_dot_ssd__pb2._SSD
 _DETECTIONMODEL.fields_by_name['experimental_model'].message_type = _EXPERIMENTALMODEL
 _DETECTIONMODEL.fields_by_name['center_net'].message_type = object__detection_dot_protos_dot_center__net__pb2._CENTERNET
+_DETECTIONMODEL.fields_by_name['prob_two_stage'].message_type = object__detection_dot_protos_dot_prob__two__stage__pb2._PROBABILISTICTWOSTAGE
 _DETECTIONMODEL.oneofs_by_name['model'].fields.append(
   _DETECTIONMODEL.fields_by_name['faster_rcnn'])
 _DETECTIONMODEL.fields_by_name['faster_rcnn'].containing_oneof = _DETECTIONMODEL.oneofs_by_name['model']
@@ -137,6 +146,9 @@ _DETECTIONMODEL.fields_by_name['experimental_model'].containing_oneof = _DETECTI
 _DETECTIONMODEL.oneofs_by_name['model'].fields.append(
   _DETECTIONMODEL.fields_by_name['center_net'])
 _DETECTIONMODEL.fields_by_name['center_net'].containing_oneof = _DETECTIONMODEL.oneofs_by_name['model']
+_DETECTIONMODEL.oneofs_by_name['model'].fields.append(
+  _DETECTIONMODEL.fields_by_name['prob_two_stage'])
+_DETECTIONMODEL.fields_by_name['prob_two_stage'].containing_oneof = _DETECTIONMODEL.oneofs_by_name['model']
 DESCRIPTOR.message_types_by_name['DetectionModel'] = _DETECTIONMODEL
 DESCRIPTOR.message_types_by_name['ExperimentalModel'] = _EXPERIMENTALMODEL
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)

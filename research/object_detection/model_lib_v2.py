@@ -40,6 +40,8 @@ from object_detection.utils import label_map_util
 from object_detection.utils import ops
 from object_detection.utils import visualization_utils as vutils
 
+from absl import logging
+
 
 MODEL_BUILD_UTIL_MAP = model_lib.MODEL_BUILD_UTIL_MAP
 
@@ -667,7 +669,7 @@ def train_loop(
           steps_per_sec_list.append(steps_per_sec)
 
           if global_step.value() - logged_step >= 100:
-            tf.logging.info(
+            logging.info(
                 'Step {} per-step time {:.3f}s loss={:.3f}'.format(
                     global_step.value(), time_taken / num_steps_per_iteration,
                     loss))
@@ -911,7 +913,7 @@ def eager_eval_loop(
        eval_features) = strategy.run(
            compute_eval_dict, args=(features, labels))
     except:  # pylint:disable=bare-except
-      tf.logging.info('A replica probably exhausted all examples. Skipping '
+      logging.info('A replica probably exhausted all examples. Skipping '
                       'pending examples on other replicas.')
       break
     (local_prediction_dict, local_groundtruth_dict,
@@ -934,7 +936,7 @@ def eager_eval_loop(
       category_index = per_class_categories
 
     if i % 100 == 0:
-      tf.logging.info('Finished eval step %d', i)
+      logging.info('Finished eval step %d', i)
 
     use_original_images = fields.InputDataFields.original_image in features
     if (use_original_images and i < eval_config.num_visualizations):
@@ -983,10 +985,10 @@ def eager_eval_loop(
     eval_metrics[loss_key] = tf.reduce_mean(loss_metrics[loss_key]).numpy()
 
   eval_metrics = {str(k): v for k, v in eval_metrics.items()}
-  tf.logging.info('Eval metrics at step %d', global_step)
+  logging.info('Eval metrics at step %d', global_step)
   for k in eval_metrics:
     tf.compat.v2.summary.scalar(k, eval_metrics[k], step=global_step)
-    tf.logging.info('\t+ %s: %f', k, eval_metrics[k])
+    logging.info('\t+ %s: %f', k, eval_metrics[k])
 
   return eval_metrics
 
@@ -1054,7 +1056,7 @@ def eval_continuously(
     kwargs['train_steps'] = train_steps
   if override_eval_num_epochs:
     kwargs.update({'eval_num_epochs': 1})
-    tf.logging.warning(
+    logging.warning(
         'Forced number of epochs for all eval validations to be 1.')
   configs = merge_external_params_with_configs(
       configs, None, kwargs_dict=kwargs)
@@ -1066,7 +1068,7 @@ def eval_continuously(
   eval_on_train_input_config.sample_1_of_n_examples = (
       sample_1_of_n_eval_on_train_examples)
   if override_eval_num_epochs and eval_on_train_input_config.num_epochs != 1:
-    tf.logging.warning('Expected number of evaluation epochs is 1, but '
+    logging.warning('Expected number of evaluation epochs is 1, but '
                        'instead encountered `eval_on_train_input_config'
                        '.num_epochs` = '
                        '{}. Overwriting `num_epochs` to 1.'.format(
@@ -1109,7 +1111,7 @@ def eval_continuously(
       optimizer.shadow_copy(detection_model)
 
     ckpt.restore(checkpoint).expect_partial()
-    tf.logging.info('Evaluate Checkpoint {}'.format(checkpoint))
+    logging.info('Evaluate Checkpoint {}'.format(checkpoint))
 
     if eval_config.use_moving_averages:
       optimizer.swap_weights()
