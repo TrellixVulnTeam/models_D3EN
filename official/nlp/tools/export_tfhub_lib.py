@@ -1,4 +1,4 @@
-# Copyright 2020 The TensorFlow Authors. All Rights Reserved.
+# Copyright 2021 The TensorFlow Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ==============================================================================
+
 """Library of components of export_tfhub.py. See docstring there for more."""
 
 import contextlib
@@ -218,11 +218,9 @@ def export_model(export_path: Text,
                                            encoder_config=encoder_config,
                                            with_mlm=with_mlm)
     encoder = pretrainer.encoder_network
-    # Support the official way to checkpoint a pretrainer.
+    # It supports both the new pretrainer checkpoint produced by TF-NLP and
+    # the checkpoint converted from TF1 (original BERT, SmallBERTs).
     checkpoint_items = pretrainer.checkpoint_items
-    # Keep supporting the ad-hoc way from Oct 2020 that is used
-    # in several important converted checkpoints (original BERT, SmallBERTs).
-    checkpoint_items["pretrainer"] = pretrainer
     checkpoint = tf.train.Checkpoint(**checkpoint_items)
   else:
     core_model, encoder = _create_model(bert_config=bert_config,
