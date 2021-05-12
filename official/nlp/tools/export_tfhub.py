@@ -1,4 +1,4 @@
-# Copyright 2020 The TensorFlow Authors. All Rights Reserved.
+# Copyright 2021 The TensorFlow Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,12 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ==============================================================================
+
 r"""Exports a BERT-like encoder and its preprocessing as SavedModels for TF Hub.
 
 This tool creates preprocessor and encoder SavedModels suitable for uploading
 to https://tfhub.dev that implement the preprocessor and encoder APIs defined
 at https://www.tensorflow.org/hub/common_saved_model_apis/text.
+
+For a full usage guide, see
+https://github.com/tensorflow/models/blob/master/official/nlp/docs/tfhub.md
 
 Minimal usage examples:
 
@@ -142,7 +145,7 @@ flags.DEFINE_integer(
     "sequence length for the bert_pack_inputs subobject."
     "Needed for --export_type preprocessing.")
 flags.DEFINE_bool(
-    "tokenize_with_offsets", False,  # Broken by b/149576200.
+    "tokenize_with_offsets", False,  # TODO(b/181866850)
     "Whether to export a .tokenize_with_offsets subobject for "
     "--export_type preprocessing.")
 flags.DEFINE_multi_string(
