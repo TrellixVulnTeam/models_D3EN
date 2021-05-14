@@ -930,7 +930,7 @@ def _build_prob_two_stage_model(prob_two_stage_config, is_training, add_summarie
       prob_two_stage_config.first_stage_anchor_generator)
 
   first_stage_target_assigner = target_assigner.create_target_assigner(
-      'FasterRCNN',
+      'ProbabilisticTwoStage',
       'proposal',
       use_matmul_gather=prob_two_stage_config.use_matmul_gather_in_matcher)
   first_stage_atrous_rate = prob_two_stage_config.first_stage_atrous_rate

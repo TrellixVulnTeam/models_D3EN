@@ -417,6 +417,14 @@ def create_target_assigner(reference, stage=None,
     box_coder_instance = faster_rcnn_box_coder.FasterRcnnBoxCoder(
         scale_factors=[10.0, 10.0, 5.0, 5.0])
 
+  elif reference == 'ProbabilisticTwoStage' and stage == 'proposal':
+    similarity_calc = sim_calc.IouSimilarity()
+    matcher = argmax_matcher.ArgMaxMatcher(matched_threshold=0.8,
+                                           force_match_for_each_row=True,
+                                           use_matmul_gather=use_matmul_gather)
+    box_coder_instance = faster_rcnn_box_coder.FasterRcnnBoxCoder(
+        scale_factors=[10.0, 10.0, 5.0, 5.0])
+
   elif reference == 'FasterRCNN' and stage == 'detection':
     similarity_calc = sim_calc.IouSimilarity()
     # Uses all proposals with IOU < 0.5 as candidate negatives.
