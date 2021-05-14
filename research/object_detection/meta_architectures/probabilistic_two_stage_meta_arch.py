@@ -385,7 +385,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     self._first_stage_localization_loss = (
         losses.WeightedSmoothL1LocalizationLoss())
     self._first_stage_objectness_loss = (
-        losses.WeightedSoftmaxClassificationLoss())
+        losses.SigmoidFocalClassificationLoss(alpha=0.25, gamma=1.5))
     self._first_stage_loc_loss_weight = first_stage_localization_loss_weight
     self._first_stage_obj_loss_weight = first_stage_objectness_loss_weight
 
@@ -544,11 +544,11 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
                             image_shape, true_image_shapes):
     """Wraps over FasterRCNNMetaArch._postprocess_rpn()."""
     image_shape_2d = self._image_batch_shape_2d(image_shape)
-    proposal_boxes_normalized, _, _, num_proposals, _, _ = \
+    proposal_boxes_normalized, proposal_scores, _, num_proposals, _, _ = \
         self._postprocess_rpn(
             rpn_box_encodings, rpn_objectness_predictions_with_background,
             anchors, image_shape_2d, true_image_shapes)
-    return proposal_boxes_normalized, num_proposals
+    return proposal_boxes_normalized, proposal_scores, num_proposals
 
   def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
     """Predicts unpostprocessed tensors from input tensor.
@@ -815,7 +815,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
         8) raw_detection_feature_map_indices: a 3-D int32 tensor with shape
           [batch_size, self.max_num_proposals, num_classes].
     """
-    proposal_boxes_normalized, num_proposals = self._proposal_postprocess(
+    proposal_boxes_normalized, proposal_scores, num_proposals = self._proposal_postprocess(
         rpn_box_encodings, rpn_objectness_predictions_with_background, anchors,
         image_shape, true_image_shapes)
     prediction_dict = self._box_prediction(rpn_features_to_crop,
@@ -823,6 +823,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
                                            image_shape, true_image_shapes,
                                            **side_inputs)
     prediction_dict['num_proposals'] = num_proposals
+    prediction_dict['proposal_scores'] = proposal_scores
     return prediction_dict
 
   def _box_prediction(self, rpn_features_to_crop, proposal_boxes_normalized,
@@ -1047,6 +1048,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
           prediction_dict['refined_box_encodings'],
           prediction_dict['class_predictions_with_background'],
           prediction_dict['proposal_boxes'],
+          prediction_dict['proposal_scores'],
           prediction_dict['num_proposals'],
           image_shapes)
       prediction_dict.update(detections_dict)
@@ -1360,6 +1362,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
             prediction_dict['refined_box_encodings'],
             prediction_dict['class_predictions_with_background'],
             prediction_dict['proposal_boxes'],
+            prediction_dict['proposal_scores'],
             prediction_dict['num_proposals'],
             true_image_shapes,
             mask_predictions=mask_predictions)
@@ -1591,6 +1594,9 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     proposal_multiclass_scores = (
         nmsed_additional_fields.get('multiclass_scores')
         if nmsed_additional_fields else None)
+
+    print(proposal_scores)
+
     return (normalized_proposal_boxes, proposal_scores,
             proposal_multiclass_scores, num_proposals,
             raw_normalized_proposal_boxes, rpn_objectness_softmax)
@@ -1851,6 +1857,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
                                   refined_box_encodings,
                                   class_predictions_with_background,
                                   proposal_boxes,
+                                  proposal_scores,
                                   num_proposals,
                                   image_shapes,
                                   mask_predictions=None):
@@ -1916,6 +1923,12 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     class_predictions_with_background_batch_normalized = (
         self._second_stage_score_conversion_fn(
             class_predictions_with_background_batch))
+
+    ## Multiply class_predictions_with_background_batch_normalized with proposal_scores
+    proposal_scores = tf.expand_dims(proposal_scores, -1)
+    class_predictions_with_background_batch_normalized = \
+        tf.sqrt(tf.multiply(class_predictions_with_background_batch_normalized, proposal_scores))
+
     class_predictions_batch = tf.reshape(
         tf.slice(class_predictions_with_background_batch_normalized,
                  [0, 0, 1], [-1, -1, -1]),
@@ -2182,7 +2195,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
       localization_loss = tf.reduce_mean(
           tf.reduce_sum(localization_losses, axis=1) / normalizer)
       objectness_loss = tf.reduce_mean(
-          tf.reduce_sum(objectness_losses, axis=1) / normalizer)
+          tf.reduce_sum(objectness_losses[:,:,1], axis=1) / normalizer)
 
       localization_loss = tf.multiply(self._first_stage_loc_loss_weight,
                                       localization_loss,
@@ -2616,10 +2629,10 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
       if (self._feature_extractor_for_proposal_features !=
           _UNINITIALIZED_FEATURE_EXTRACTOR):
         all_losses.extend(self._feature_extractor_for_proposal_features.losses)
-    if isinstance(self._first_stage_box_predictor_first_conv,
-                  tf.keras.Model):
-      all_losses.extend(
-          self._first_stage_box_predictor_first_conv.losses)
+    # if isinstance(self._first_stage_box_predictor_first_conv,
+    #               tf.keras.Model):
+    #   all_losses.extend(
+    #       self._first_stage_box_predictor_first_conv.losses)
     if self._first_stage_box_predictor.is_keras_model:
       all_losses.extend(self._first_stage_box_predictor.losses)
     if self._feature_extractor_for_box_classifier_features:
