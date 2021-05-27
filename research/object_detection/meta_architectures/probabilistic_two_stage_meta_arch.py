@@ -1595,8 +1595,6 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
         nmsed_additional_fields.get('multiclass_scores')
         if nmsed_additional_fields else None)
 
-    print(proposal_scores)
-
     return (normalized_proposal_boxes, proposal_scores,
             proposal_multiclass_scores, num_proposals,
             raw_normalized_proposal_boxes, rpn_objectness_softmax)
