@@ -473,6 +473,7 @@ def pad_input_data_to_static_shapes(tensor_dict,
       input_fields.source_id: [],
       input_fields.filename: [],
       input_fields.key: [],
+      input_fields.weightInGrams: [],
       input_fields.groundtruth_difficult: [max_num_boxes],
       input_fields.groundtruth_boxes: [max_num_boxes, 4],
       input_fields.groundtruth_classes: [max_num_boxes, num_classes],
@@ -718,7 +719,9 @@ def _get_features_dict(input_dict, include_source_id=False):
       fields.InputDataFields.true_image_shape:
           input_dict[fields.InputDataFields.true_image_shape],
       fields.InputDataFields.original_image_spatial_shape:
-          input_dict[fields.InputDataFields.original_image_spatial_shape]
+          input_dict[fields.InputDataFields.original_image_spatial_shape],
+      fields.InputDataFields.weightInGrams:
+          input_dict[fields.InputDataFields.weightInGrams]
   }
   if include_source_id:
     features[fields.InputDataFields.source_id] = source_id
@@ -896,6 +899,9 @@ def train_input(train_config, train_input_config,
       batch_size=params['batch_size'] if params else train_config.batch_size,
       input_context=input_context,
       reduce_to_frame_fn=reduce_to_frame_fn)
+
+  for features, labels in dataset.take(10):
+      print(features[fields.InputDataFields.weightInGrams])
   return dataset
 
 

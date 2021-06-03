@@ -148,6 +148,7 @@ class InputDataFields(object):
   image_format = 'image_format'
   image_height = 'image_height'
   image_width = 'image_width'
+  weightInGrams = 'weightInGrams'
 
 
 class DetectionResultFields(object):
