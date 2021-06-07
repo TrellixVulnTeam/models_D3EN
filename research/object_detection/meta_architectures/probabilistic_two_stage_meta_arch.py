@@ -162,12 +162,12 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
   def __init__(self,
                is_training,
                num_classes,
+               add_weight_information,
                image_resizer_fn,
                feature_extractor,
                number_of_stages,
                first_stage_anchor_generator,
                first_stage_target_assigner,
-               first_stage_atrous_rate,
                first_stage_box_predictor,
                first_stage_minibatch_size,
                first_stage_sampler,
@@ -348,6 +348,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     super(ProbabilisticTwoStageMetaArch, self).__init__(num_classes=num_classes)
 
     self._is_training = is_training
+    self.add_weight_information = add_weight_information
     self._image_resizer_fn = image_resizer_fn
     self._resize_masks = resize_masks
     self._feature_extractor = feature_extractor
@@ -373,7 +374,6 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
 
     # (First stage) Region proposal network parameters
     self._first_stage_anchor_generator = first_stage_anchor_generator
-    self._first_stage_atrous_rate = first_stage_atrous_rate
     self._first_stage_box_predictor = first_stage_box_predictor
     self._first_stage_minibatch_size = first_stage_minibatch_size
     self._first_stage_sampler = first_stage_sampler
@@ -481,6 +481,26 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
   @property
   def feature_extractor(self):
     return self._feature_extractor
+
+  @staticmethod
+  def get_side_inputs(features):
+    """Get side inputs from input features.
+
+    This placeholder method provides a way for a meta-architecture to specify
+    how to grab additional side inputs from input features (in addition to the
+    image itself) and allows models to depend on contextual information.  By
+    default, detection models do not use side information (and thus this method
+    returns an empty dictionary by default.  However it can be overridden if
+    side inputs are necessary."
+
+    Args:
+      features: A dictionary of tensors.
+
+    Returns:
+      An empty dictionary by default.
+    """
+
+    return {'weightInGrams': features[fields.InputDataFields.weightInGrams]}
 
   def preprocess(self, inputs):
     """Feature-extractor specific preprocessing.
@@ -881,10 +901,14 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
           self.max_num_proposals, 4] containing the reference anchors for raw
           detection boxes in normalized coordinates.
     """
-    flattened_proposal_feature_maps = (
+    proposal_feature_maps = (
         self._compute_second_stage_input_feature_maps(
             rpn_features_to_crop, proposal_boxes_normalized,
             image_shape, **side_inputs))
+
+    # flatten feature maps to 2D before using model and concat weight information if existing
+    flattened_proposal_feature_maps = self._create_flattened_features_for_box_classifier_extractor(
+        proposal_feature_maps, **side_inputs)
 
     box_classifier_features = self._extract_box_classifier_features(
         flattened_proposal_feature_maps, **side_inputs)
@@ -966,7 +990,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
             detection_feature_map_indices
     }
 
-  def _extract_box_classifier_features(self, flattened_feature_maps):
+  def _extract_box_classifier_features(self, flattened_feature_maps, **side_inputs):
     if self._feature_extractor_for_box_classifier_features == (
         _UNINITIALIZED_FEATURE_EXTRACTOR):
       self._feature_extractor_for_box_classifier_features = (
@@ -977,12 +1001,26 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
       box_classifier_features = (
           self._feature_extractor_for_box_classifier_features(
               flattened_feature_maps))
-    else:
-      box_classifier_features = (
-          self._feature_extractor.extract_box_classifier_features(
-              flattened_feature_maps,
-              scope=self.second_stage_feature_extractor_scope))
+    # else:
+    #   box_classifier_features = (
+    #       self._feature_extractor.extract_box_classifier_features(
+    #           flattened_feature_maps,
+    #           scope=self.second_stage_feature_extractor_scope))
     return box_classifier_features
+
+  def _create_flattened_features_for_box_classifier_extractor(self, feature_maps, **side_inputs):
+    flattened_feature_maps = tf.reshape(feature_maps, [feature_maps.shape[0], -1])
+    print(flattened_feature_maps)
+
+    if self.add_weight_information:
+      weight_in_grams = tf.cast(side_inputs['weightInGrams'], dtype=tf.float32)
+      weight_in_grams_repeated = tf.expand_dims(tf.repeat(weight_in_grams, repeats=self.max_num_proposals), axis=1)
+      print(weight_in_grams_repeated)
+      flattened_feature_maps = tf.concat([flattened_feature_maps, weight_in_grams_repeated], axis=1)
+      print(flattened_feature_maps)
+
+    return flattened_feature_maps
+
 
   def _predict_third_stage(self, prediction_dict, image_shapes):
     """Predicts non-box, non-class outputs using refined detections.

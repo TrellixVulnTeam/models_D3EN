@@ -241,7 +241,6 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
     """
 
     feature_extractor_model = tf.keras.models.Sequential([
-        tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(units=1024, activation='relu'),
         self._conv_hyperparams.build_batch_norm(
             training=(self._is_training and not self._freeze_batchnorm)),

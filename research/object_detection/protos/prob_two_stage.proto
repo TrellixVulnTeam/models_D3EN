@@ -23,6 +23,9 @@ message ProbabilisticTwoStage {
   // Whether to construct only the Region Proposal Network (RPN).
   optional int32 number_of_stages = 1 [default = 2];
 
+  // Wether to add Weight Information as Side Input to the model.
+  optional bool add_weight_information = 2 [default = false];
+
   // Number of classes to predict.
   optional int32 num_classes = 3;
 
@@ -36,10 +39,6 @@ message ProbabilisticTwoStage {
 
   // Anchor generator to compute RPN anchors.
   optional AnchorGenerator first_stage_anchor_generator = 6;
-
-  // Atrous rate for the convolution op applied to the
-  // `first_stage_features_to_crop` tensor to obtain box predictions.
-  optional int32 first_stage_atrous_rate = 7 [default = 1];
 
   // Output depth for the convolution op just prior to RPN box predictions.
   optional BoxPredictor first_stage_box_predictor = 10;

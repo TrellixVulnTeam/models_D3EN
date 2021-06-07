@@ -916,6 +916,7 @@ def _build_prob_two_stage_model(prob_two_stage_config, is_training, add_summarie
       model_class_map).
   """
   num_classes = prob_two_stage_config.num_classes
+  add_weight_information = prob_two_stage_config.add_weight_information
   image_resizer_fn = image_resizer_builder.build(prob_two_stage_config.image_resizer)
   _check_feature_extractor_exists(prob_two_stage_config.feature_extractor.type)
   is_keras = tf_version.is_tf2()
@@ -933,7 +934,6 @@ def _build_prob_two_stage_model(prob_two_stage_config, is_training, add_summarie
       'ProbabilisticTwoStage',
       'proposal',
       use_matmul_gather=prob_two_stage_config.use_matmul_gather_in_matcher)
-  first_stage_atrous_rate = prob_two_stage_config.first_stage_atrous_rate
   if is_keras:
     first_stage_box_predictor = box_predictor_builder.build_keras(
         hyperparams_builder.KerasLayerHyperparams,
@@ -1024,6 +1024,8 @@ def _build_prob_two_stage_model(prob_two_stage_config, is_training, add_summarie
           is_training,
       'num_classes':
           num_classes,
+      'add_weight_information':
+          add_weight_information,
       'image_resizer_fn':
           image_resizer_fn,
       'feature_extractor':
@@ -1034,8 +1036,6 @@ def _build_prob_two_stage_model(prob_two_stage_config, is_training, add_summarie
           first_stage_anchor_generator,
       'first_stage_target_assigner':
           first_stage_target_assigner,
-      'first_stage_atrous_rate':
-          first_stage_atrous_rate,
       'first_stage_box_predictor':
           first_stage_box_predictor,
       'first_stage_minibatch_size':
