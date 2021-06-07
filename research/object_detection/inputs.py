@@ -900,8 +900,6 @@ def train_input(train_config, train_input_config,
       input_context=input_context,
       reduce_to_frame_fn=reduce_to_frame_fn)
 
-  for features, labels in dataset.take(10):
-      print(features[fields.InputDataFields.weightInGrams])
   return dataset
 
 
