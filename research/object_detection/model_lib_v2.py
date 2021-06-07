@@ -26,8 +26,7 @@ import numpy as np
 from tensorflow.keras.backend import count_params
 from fruitod.utils.csv_util import write_metrics
 
-import tensorflow.compat.v1 as tf
-import tensorflow.compat.v2 as tf2
+import tensorflow as tf
 
 from object_detection import eval_util
 from object_detection import inputs
@@ -584,7 +583,7 @@ def train_loop(
     summary_writer = tf.compat.v2.summary.create_file_writer(
         summary_writer_filepath)
   else:
-    summary_writer = tf2.summary.create_noop_writer()
+    summary_writer = tf.summary.create_noop_writer()
 
   with summary_writer.as_default():
     with strategy.scope():
@@ -718,7 +717,7 @@ def train_loop(
 
   ## Write Params to Dataframe/CSV
   head, tail = os.path.split(str(model_dir))
-  metrics = {'Parameter': total_params}
+  metrics = {'Parameter': trainable_params}
   write_metrics(head, metrics)
 
 
@@ -914,6 +913,29 @@ def eager_eval_loop(
             features[fields.InputDataFields.true_image_shape],
         inputs.HASH_KEY: features[inputs.HASH_KEY],
     }
+
+    # gt_boxes = labels[fields.InputDataFields.groundtruth_boxes]
+    # print('Groundtruth Boxes:')
+    # print(gt_boxes[0].shape)
+    # print(gt_boxes[0].numpy())
+    #
+    # det_scores = tf.squeeze(prediction_dict[fields.DetectionResultFields.detection_scores])
+    # det_boxes = tf.squeeze(prediction_dict[fields.DetectionResultFields.detection_boxes])
+    #
+    # indices, scores = tf.image.non_max_suppression_with_scores(boxes=det_boxes, scores=det_scores,
+    #                                        iou_threshold=0.9, score_threshold=0.99, soft_nms_sigma=0.9,
+    #                                        max_output_size=30)
+    #
+    # det_boxes_with_nms = tf.gather(det_boxes, indices)
+    # print('Detection Boxes with NMS:')
+    # print(det_boxes_with_nms.shape)
+    # print(det_boxes_with_nms.numpy())
+    #
+    # det_scores_with_nms = tf.gather(det_scores, indices)
+    # print('Detection Scores with NMS:')
+    # print(det_scores_with_nms.shape)
+    # print(det_scores_with_nms.numpy())
+
     return losses_dict, prediction_dict, groundtruth_dict, eval_features
 
   agnostic_categories = label_map_util.create_class_agnostic_category_index()
