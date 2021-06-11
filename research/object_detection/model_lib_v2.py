@@ -24,7 +24,7 @@ import time
 import numpy as np
 
 from tensorflow.keras.backend import count_params
-from fruitod.utils.csv_util import write_metrics
+from fruitod.utils.csv_util import write_metrics, write_loss_to_csv, write_eval_to_csv
 
 import tensorflow as tf
 
@@ -321,7 +321,7 @@ def eager_train_step(detection_model,
         step=global_step,
         data=features[fields.InputDataFields.image],
         max_outputs=num_visualization)
-  return total_loss
+  return total_loss, losses_dict
 
 
 def validate_tf_v2_checkpoint_restore_map(checkpoint_restore_map):
@@ -634,15 +634,15 @@ def train_loop(
         def _sample_and_train(strategy, train_step_fn, data_iterator):
           features, labels = data_iterator.next()
           if hasattr(tf.distribute.Strategy, 'run'):
-            per_replica_losses = strategy.run(
+            per_replica_losses, losses_dict = strategy.run(
                 train_step_fn, args=(features, labels))
           else:
-            per_replica_losses = strategy.experimental_run_v2(
+            per_replica_losses, losses_dict = strategy.experimental_run_v2(
                 train_step_fn, args=(features, labels))
           # TODO(anjalisridhar): explore if it is safe to remove the
           ## num_replicas scaling of the loss and switch this to a ReduceOp.Mean
-          return strategy.reduce(tf.distribute.ReduceOp.SUM,
-                                 per_replica_losses, axis=None)
+          return per_replica_losses, losses_dict
+
 
         @tf.function
         def _dist_train_step(data_iterator):
@@ -669,7 +669,14 @@ def train_loop(
         for _ in range(global_step.value(), train_steps,
                        num_steps_per_iteration):
 
-          loss = _dist_train_step(train_input_iter)
+          loss, losses_dict = _dist_train_step(train_input_iter)
+
+          if global_step.value() - logged_step >= 100:
+            loss_step_dict = {'global_step': global_step.value().numpy()}
+            for loss_type in losses_dict:
+              loss_step_dict[loss_type] = losses_dict[loss_type].numpy()
+            head, tail = os.path.split(str(model_dir))
+            write_loss_to_csv(head, loss_step_dict)
 
           time_taken = time.time() - last_step_time
           last_step_time = time.time()
@@ -1180,3 +1187,7 @@ def eval_continuously(
       ## Write Metrics to Dataframe/CSV
       head, tail = os.path.split(str(model_dir))
       write_metrics(head, eval_metrics)
+
+      eval_dict = eval_metrics
+      eval_dict['global_step'] = global_step.value().numpy()
+      write_eval_to_csv(head, eval_dict)
