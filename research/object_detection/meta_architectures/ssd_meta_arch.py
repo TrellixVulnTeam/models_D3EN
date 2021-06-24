@@ -274,6 +274,7 @@ class SSDMetaArch(model.DetectionModel):
                normalize_loss_by_num_matches,
                hard_example_miner,
                target_assigner_instance,
+               add_weight_information,
                add_summaries=True,
                normalize_loc_loss_by_codesize=False,
                freeze_batchnorm=False,
@@ -381,6 +382,8 @@ class SSDMetaArch(model.DetectionModel):
     self._add_background_class = add_background_class
     self._explicit_background_class = explicit_background_class
 
+    self._add_weight_information = add_weight_information
+
     if add_background_class and explicit_background_class:
       raise ValueError("Cannot have both 'add_background_class' and"
                        " 'explicit_background_class' true.")
@@ -456,6 +459,26 @@ class SSDMetaArch(model.DetectionModel):
                          'tensor names.')
     return self._batched_prediction_tensor_names
 
+  @staticmethod
+  def get_side_inputs(features):
+    """Get side inputs from input features.
+
+		This placeholder method provides a way for a meta-architecture to specify
+		how to grab additional side inputs from input features (in addition to the
+		image itself) and allows models to depend on contextual information.  By
+		default, detection models do not use side information (and thus this method
+		returns an empty dictionary by default.  However it can be overridden if
+		side inputs are necessary."
+
+		Args:
+			features: A dictionary of tensors.
+
+		Returns:
+			An empty dictionary by default.
+		"""
+
+    return {'weightInGrams': features[fields.InputDataFields.weightInGrams]}
+
   def preprocess(self, inputs):
     """Feature-extractor specific preprocessing.
 
@@ -522,7 +545,7 @@ class SSDMetaArch(model.DetectionModel):
         ],
         axis=1)
 
-  def predict(self, preprocessed_inputs, true_image_shapes):
+  def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
     """Predicts unpostprocessed tensors from input tensor.
 
     This function takes an input batch of images and runs it through the forward
@@ -577,6 +600,13 @@ class SSDMetaArch(model.DetectionModel):
                                [preprocessed_inputs]):
           feature_maps = self._feature_extractor.extract_features(
               preprocessed_inputs)
+
+    print(self._add_weight_information)
+
+    if self._add_weight_information:
+      print(feature_maps[0])
+      print(tf.math.sigmoid(feature_maps[0]))
+      print(side_inputs['weightInGrams'])
 
     feature_map_spatial_dims = self._get_feature_map_spatial_dims(
         feature_maps)

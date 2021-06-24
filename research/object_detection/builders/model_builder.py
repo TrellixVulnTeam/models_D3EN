@@ -446,11 +446,14 @@ def _build_ssd_model(ssd_config, is_training, add_summaries):
       box_coder,
       negative_class_weight=negative_class_weight)
 
+  add_weight_information = ssd_config.add_weight_information
+
   ssd_meta_arch_fn = ssd_meta_arch.SSDMetaArch
   kwargs = {}
 
   return ssd_meta_arch_fn(
       is_training=is_training,
+      add_weight_information=add_weight_information,
       anchor_generator=anchor_generator,
       box_predictor=ssd_box_predictor,
       box_coder=box_coder,
