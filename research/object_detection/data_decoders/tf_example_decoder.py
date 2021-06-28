@@ -205,7 +205,7 @@ class TfExampleDecoder(data_decoder.DataDecoder):
         'image/width':
             tf.FixedLenFeature((), tf.int64, default_value=1),
         'image/weightInGrams':
-            tf.FixedLenFeature((), tf.int64, default_value=66),
+            tf.FixedLenFeature((), tf.float32, default_value=-1.0),
         # Image-level labels.
         'image/class/text':
             tf.VarLenFeature(tf.string),

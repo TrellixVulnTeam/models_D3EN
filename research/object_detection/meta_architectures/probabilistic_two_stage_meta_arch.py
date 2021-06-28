@@ -1012,7 +1012,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     flattened_feature_maps = tf.reshape(feature_maps, [feature_maps.shape[0], -1])
 
     if self.add_weight_information:
-      weight_in_grams = tf.cast(side_inputs['weightInGrams'], dtype=tf.float32)
+      weight_in_grams = side_inputs['weightInGrams']
       weight_in_grams_repeated = tf.expand_dims(tf.repeat(weight_in_grams, repeats=self.max_num_proposals), axis=1)
       flattened_feature_maps = tf.concat([flattened_feature_maps, weight_in_grams_repeated], axis=1)
 
