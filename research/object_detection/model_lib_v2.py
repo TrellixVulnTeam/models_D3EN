@@ -665,12 +665,17 @@ def train_loop(
         logged_step = global_step.value()
 
         # tf.compat.v2.summary.trace_on(profiler=False)
-        tf.profiler.experimental.start(model_dir)
         last_step_time = time.time()
         for step in range(global_step.value(), train_steps,
                        num_steps_per_iteration):
+          if step % 100 == 0:
+            tf.profiler.experimental.start(model_dir)
+
           with tf.profiler.experimental.Trace('Train', step_num=step):
             loss, losses_dict = _dist_train_step(train_input_iter)
+
+          if step % 100 == 0:
+            tf.profiler.experimental.stop()
 
           if global_step.value() - logged_step >= 100:
             loss_step_dict = {'global_step': global_step.value().numpy()}
@@ -699,7 +704,6 @@ def train_loop(
               checkpoint_every_n):
             manager.save()
             checkpointed_step = int(global_step.value())
-        tf.profiler.experimental.stop()
         # tf.compat.v2.summary.trace_export('graph', step=0)
 
   # Remove the checkpoint directories of the non-chief workers that
