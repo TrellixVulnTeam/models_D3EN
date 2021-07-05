@@ -22,7 +22,6 @@ import copy
 import os
 import time
 import numpy as np
-from memory_profiler import profile
 
 from tensorflow.keras.backend import count_params
 from fruitod.utils.csv_util import write_metrics, write_loss_to_csv, write_eval_to_csv
