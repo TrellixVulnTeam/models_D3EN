@@ -144,6 +144,34 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
     logging.info('EfficientDet BiFPN num iterations: %d',
                  self._bifpn_num_iterations)
 
+    self._backbone_max_level = min(
+      max(_EFFICIENTNET_LEVEL_ENDPOINTS.keys()), self._bifpn_max_level)
+    self._output_layer_names = [
+      _EFFICIENTNET_LEVEL_ENDPOINTS[i]
+      for i in range(self._bifpn_min_level, self._backbone_max_level + 1)]
+    self._output_layer_alias = [
+      'level_{}'.format(i)
+      for i in range(self._bifpn_min_level, self._backbone_max_level + 1)]
+
+    efficientnet_base = efficientnet_model.EfficientNet.from_name(
+      model_name=self._efficientnet_version,
+      overrides={'rescale_input': False})
+    outputs = [efficientnet_base.get_layer(output_layer_name).output
+               for output_layer_name in self._output_layer_names]
+    self.classification_backbone = tf.keras.Model(
+      inputs=efficientnet_base.inputs, outputs=outputs)
+    self._bifpn_stage = bifpn_generators.KerasBiFpnFeatureMaps(
+      bifpn_num_iterations=self._bifpn_num_iterations,
+      bifpn_num_filters=self._bifpn_num_filters,
+      fpn_min_level=self._bifpn_min_level,
+      fpn_max_level=self._bifpn_max_level,
+      input_max_level=self._backbone_max_level,
+      is_training=self._is_training,
+      conv_hyperparams=self._conv_hyperparams,
+      freeze_batchnorm=self._freeze_batchnorm,
+      bifpn_node_params=self._bifpn_node_params,
+      name='bifpn')
+
   def preprocess(self, resized_inputs):
     """Faster R-CNN Resnet V1 preprocessing.
 
@@ -183,34 +211,6 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
       And returns rpn_feature_map:
         A list of tensors with shape [batch, height, width, depth]
     """
-
-    self._backbone_max_level = min(
-      max(_EFFICIENTNET_LEVEL_ENDPOINTS.keys()), self._bifpn_max_level)
-    self._output_layer_names = [
-      _EFFICIENTNET_LEVEL_ENDPOINTS[i]
-      for i in range(self._bifpn_min_level, self._backbone_max_level + 1)]
-    self._output_layer_alias = [
-      'level_{}'.format(i)
-      for i in range(self._bifpn_min_level, self._backbone_max_level + 1)]
-
-    efficientnet_base = efficientnet_model.EfficientNet.from_name(
-      model_name=self._efficientnet_version,
-      overrides={'rescale_input': False})
-    outputs = [efficientnet_base.get_layer(output_layer_name).output
-               for output_layer_name in self._output_layer_names]
-    self.classification_backbone = tf.keras.Model(
-      inputs=efficientnet_base.inputs, outputs=outputs)
-    self._bifpn_stage = bifpn_generators.KerasBiFpnFeatureMaps(
-      bifpn_num_iterations=self._bifpn_num_iterations,
-      bifpn_num_filters=self._bifpn_num_filters,
-      fpn_min_level=self._bifpn_min_level,
-      fpn_max_level=self._bifpn_max_level,
-      input_max_level=self._backbone_max_level,
-      is_training=self._is_training,
-      conv_hyperparams=self._conv_hyperparams,
-      freeze_batchnorm=self._freeze_batchnorm,
-      bifpn_node_params=self._bifpn_node_params,
-      name='bifpn')
 
     feature_extractor_model = _EfficientNetBiFPN(efficientnet_backbone=self.classification_backbone,
                                                  bifpn_generator=self._bifpn_stage,
