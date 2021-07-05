@@ -674,7 +674,7 @@ def train_loop(
           with tf.profiler.experimental.Trace('Train', step_num=step):
             loss, losses_dict = _dist_train_step(train_input_iter)
 
-          if step % 100 == 0:
+          if step % 100 == 10:
             tf.profiler.experimental.stop()
 
           if global_step.value() - logged_step >= 100:
