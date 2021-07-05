@@ -22,6 +22,7 @@ import copy
 import os
 import time
 import numpy as np
+from memory_profiler import profile
 
 from tensorflow.keras.backend import count_params
 from fruitod.utils.csv_util import write_metrics, write_loss_to_csv, write_eval_to_csv
@@ -664,12 +665,13 @@ def train_loop(
         checkpointed_step = int(global_step.value())
         logged_step = global_step.value()
 
-        tf.compat.v2.summary.trace_on(profiler=False)
+        # tf.compat.v2.summary.trace_on(profiler=False)
+        tf.profiler.experimental.start(model_dir)
         last_step_time = time.time()
-        for _ in range(global_step.value(), train_steps,
+        for step in range(global_step.value(), train_steps,
                        num_steps_per_iteration):
-
-          loss, losses_dict = _dist_train_step(train_input_iter)
+          with tf.profiler.experimental.Trace('Train', step_num=step):
+            loss, losses_dict = _dist_train_step(train_input_iter)
 
           if global_step.value() - logged_step >= 100:
             loss_step_dict = {'global_step': global_step.value().numpy()}
@@ -698,8 +700,8 @@ def train_loop(
               checkpoint_every_n):
             manager.save()
             checkpointed_step = int(global_step.value())
-
-        tf.compat.v2.summary.trace_export('graph', step=0)
+        tf.profiler.experimental.stop()
+        # tf.compat.v2.summary.trace_export('graph', step=0)
 
   # Remove the checkpoint directories of the non-chief workers that
   # MultiWorkerMirroredStrategy forces us to save during sync distributed
