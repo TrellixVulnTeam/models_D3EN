@@ -172,6 +172,19 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
       bifpn_node_params=self._bifpn_node_params,
       name='bifpn')
 
+    self.proposal_feature_extractor_model = _EfficientNetBiFPN(efficientnet_backbone=self.classification_backbone,
+                                                              bifpn_generator=self._bifpn_stage,
+                                                              pad_to_multiple=self._pad_to_multiple,
+                                                              output_layer_alias=self._output_layer_alias)
+
+    self.box_classifier_model = tf.keras.models.Sequential([
+      tf.keras.layers.Dense(units=1024, activation='relu'),
+      self._conv_hyperparams.build_batch_norm(
+        training=(self._is_training and not self._freeze_batchnorm)),
+      tf.keras.layers.Dense(units=1024, activation='relu'),
+      tf.keras.layers.Reshape((1, 1, 1024))
+    ])
+
   def preprocess(self, resized_inputs):
     """Faster R-CNN Resnet V1 preprocessing.
 
@@ -212,11 +225,7 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
         A list of tensors with shape [batch, height, width, depth]
     """
 
-    feature_extractor_model = _EfficientNetBiFPN(efficientnet_backbone=self.classification_backbone,
-                                                 bifpn_generator=self._bifpn_stage,
-                                                 pad_to_multiple=self._pad_to_multiple,
-                                                 output_layer_alias=self._output_layer_alias)
-    return feature_extractor_model
+    return self.proposal_feature_extractor_model
 
 
 
@@ -240,14 +249,7 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
         representing box classifier features for each proposal.
     """
 
-    feature_extractor_model = tf.keras.models.Sequential([
-        tf.keras.layers.Dense(units=1024, activation='relu'),
-        self._conv_hyperparams.build_batch_norm(
-            training=(self._is_training and not self._freeze_batchnorm)),
-        tf.keras.layers.Dense(units=1024, activation='relu'),
-        tf.keras.layers.Reshape((1, 1, 1024))
-    ])
-    return feature_extractor_model
+    return self.box_classifier_model
 
 
 class ProbabilisticTwoStageEfficientNetB0BiFPNKerasFeatureExtractor(
