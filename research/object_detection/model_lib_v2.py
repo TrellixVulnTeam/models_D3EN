@@ -668,6 +668,7 @@ def train_loop(
         last_step_time = time.time()
         for step in range(global_step.value(), train_steps,
                        num_steps_per_iteration):
+          tf.keras.backend.clear_session()
           if step % 1000 == 0:
             tf.profiler.experimental.start(model_dir)
           with tf.profiler.experimental.Trace('Train', step_num=step):
