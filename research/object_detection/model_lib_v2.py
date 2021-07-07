@@ -695,7 +695,7 @@ def train_loop(
 
           steps_per_sec_list.append(steps_per_sec)
 
-          if global_step.value() - logged_step >= 1:
+          if global_step.value() - logged_step >= 100:
             logging.info(
                 'Step {} per-step time {:.3f}s loss={:.3f}'.format(
                     global_step.value(), time_taken / num_steps_per_iteration,
