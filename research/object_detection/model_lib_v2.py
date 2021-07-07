@@ -676,7 +676,6 @@ def train_loop(
           # if step % 1000 == 10:
           #   tf.profiler.experimental.stop()
 
-          tf.compat.v1.reset_default_graph()
 
           loss, losses_dict = _dist_train_step(train_input_iter)
 
