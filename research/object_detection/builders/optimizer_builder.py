@@ -130,7 +130,7 @@ def build_optimizers_tf_v2(optimizer_config, global_step=None):
     learning_rate = _create_learning_rate(config.learning_rate,
                                           global_step=global_step)
     summary_vars.append(learning_rate)
-    optimizer = tf.keras.optimizers.Adam(learning_rate, epsilon=config.epsilon, beta_1=0.99)
+    optimizer = tf.keras.optimizers.Adam(learning_rate, epsilon=config.epsilon)
 
   if optimizer is None:
     raise ValueError('Optimizer %s not supported.' % optimizer_type)
