@@ -44,7 +44,7 @@ from absl import logging
 
 
 MODEL_BUILD_UTIL_MAP = model_lib.MODEL_BUILD_UTIL_MAP
-NUM_STEPS_PER_ITERATION = 1
+NUM_STEPS_PER_ITERATION = 100
 
 
 RESTORE_MAP_ERROR_TEMPLATE = (
@@ -121,20 +121,29 @@ def _compute_losses_and_predictions_dicts(
   model_lib.provide_groundtruth(model, labels)
   preprocessed_images = features[fields.InputDataFields.image]
 
+  predict_start = time.time()
   prediction_dict = model.predict(
       preprocessed_images,
       features[fields.InputDataFields.true_image_shape],
       **model.get_side_inputs(features))
+  predict_end = time.time()
+  predict_time = predict_end - predict_start
   prediction_dict = ops.bfloat16_to_float32_nested(prediction_dict)
 
+  loss_start = time.time()
   losses_dict = model.loss(
       prediction_dict, features[fields.InputDataFields.true_image_shape])
+  loss_end = time.time()
+  loss_time = loss_end - loss_start
   losses = [loss_tensor for loss_tensor in losses_dict.values()]
   if add_regularization_loss:
     # TODO(kaftan): As we figure out mixed precision & bfloat 16, we may
     ## need to convert these regularization losses from bfloat16 to float32
     ## as well.
+    regularization_start = time.time()
     regularization_losses = model.regularization_losses()
+    regularization_end = time.time()
+    regularization_time = regularization_end - regularization_start
     if regularization_losses:
       regularization_losses = ops.bfloat16_to_float32_nested(
           regularization_losses)
@@ -146,7 +155,7 @@ def _compute_losses_and_predictions_dicts(
   total_loss = tf.add_n(losses, name='total_loss')
   losses_dict['Loss/total_loss'] = total_loss
 
-  return losses_dict, prediction_dict
+  return losses_dict, prediction_dict, predict_time, loss_time, regularization_time
 
 
 def _ensure_model_is_built(model, input_dataset, unpad_groundtruth_tensors):
@@ -293,7 +302,7 @@ def eager_train_step(detection_model,
       labels, unpad_groundtruth_tensors=unpad_groundtruth_tensors)
 
   with tf.GradientTape() as tape:
-    losses_dict, _ = _compute_losses_and_predictions_dicts(
+    losses_dict, _, predict_time, loss_time, regularization_time = _compute_losses_and_predictions_dicts(
         detection_model, features, labels, add_regularization_loss)
 
     total_loss = losses_dict['Loss/total_loss']
@@ -315,6 +324,9 @@ def eager_train_step(detection_model,
     gradients, _ = tf.clip_by_global_norm(gradients, clip_gradients_value)
   optimizer.apply_gradients(zip(gradients, trainable_variables))
   tf.compat.v2.summary.scalar('learning_rate', learning_rate, step=global_step)
+  tf.compat.v2.summary.scalar('predict_time', predict_time, step=global_step)
+  tf.compat.v2.summary.scalar('loss_time', loss_time, step=global_step)
+  tf.compat.v2.summary.scalar('regularization_time', regularization_time, step=global_step)
   if num_visualization > 0:
     tf.compat.v2.summary.image(
         name='train_input_images',
@@ -707,6 +719,7 @@ def train_loop(
             manager.save()
             checkpointed_step = int(global_step.value())
         # tf.compat.v2.summary.trace_export('graph', step=0)
+        manager.save()
 
   # Remove the checkpoint directories of the non-chief workers that
   # MultiWorkerMirroredStrategy forces us to save during sync distributed
@@ -912,7 +925,7 @@ def eager_eval_loop(
     labels = model_lib.unstack_batch(
         labels, unpad_groundtruth_tensors=unpad_groundtruth_tensors)
 
-    losses_dict, prediction_dict = _compute_losses_and_predictions_dicts(
+    losses_dict, prediction_dict, _, _, _ = _compute_losses_and_predictions_dicts(
         detection_model, features, labels, add_regularization_loss)
     prediction_dict = detection_model.postprocess(
         prediction_dict, features[fields.InputDataFields.true_image_shape])
