@@ -920,6 +920,7 @@ def _build_prob_two_stage_model(prob_two_stage_config, is_training, add_summarie
   """
   num_classes = prob_two_stage_config.num_classes
   add_weight_information = prob_two_stage_config.add_weight_information
+  weight_method = prob_two_stage_config.weight_method
   image_resizer_fn = image_resizer_builder.build(prob_two_stage_config.image_resizer)
   _check_feature_extractor_exists(prob_two_stage_config.feature_extractor.type)
   is_keras = tf_version.is_tf2()
@@ -1029,6 +1030,8 @@ def _build_prob_two_stage_model(prob_two_stage_config, is_training, add_summarie
           num_classes,
       'add_weight_information':
           add_weight_information,
+      'weight_method':
+          weight_method,
       'image_resizer_fn':
           image_resizer_fn,
       'feature_extractor':

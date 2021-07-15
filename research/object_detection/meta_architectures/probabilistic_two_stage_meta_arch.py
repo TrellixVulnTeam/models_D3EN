@@ -96,6 +96,8 @@ configured in the meta architecture:
 from __future__ import print_function
 import abc
 import functools
+import logging
+
 import tensorflow.compat.v1 as tf
 import tf_slim as slim
 
@@ -163,6 +165,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
                is_training,
                num_classes,
                add_weight_information,
+               weight_method,
                image_resizer_fn,
                feature_extractor,
                number_of_stages,
@@ -349,6 +352,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
 
     self._is_training = is_training
     self.add_weight_information = add_weight_information
+    self.weight_method = weight_method
     self._image_resizer_fn = image_resizer_fn
     self._resize_masks = resize_masks
     self._feature_extractor = feature_extractor
@@ -1014,7 +1018,8 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     if self.add_weight_information:
       weight_in_grams = side_inputs['weightInGrams']
       weight_in_grams_repeated = tf.expand_dims(tf.repeat(weight_in_grams, repeats=self.max_num_proposals), axis=1)
-      flattened_feature_maps = tf.concat([flattened_feature_maps, weight_in_grams_repeated], axis=1)
+      if self.weight_method == 'concat':
+        flattened_feature_maps = tf.concat([flattened_feature_maps, weight_in_grams_repeated], axis=1)
 
     return flattened_feature_maps
 
