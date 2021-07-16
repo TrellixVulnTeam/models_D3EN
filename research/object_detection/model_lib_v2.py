@@ -121,29 +121,33 @@ def _compute_losses_and_predictions_dicts(
   model_lib.provide_groundtruth(model, labels)
   preprocessed_images = features[fields.InputDataFields.image]
 
-  predict_start = time.time()
+  predict_start = time.perf_counter()
   prediction_dict = model.predict(
       preprocessed_images,
       features[fields.InputDataFields.true_image_shape],
       **model.get_side_inputs(features))
-  predict_end = time.time()
+  predict_end = time.perf_counter()
   predict_time = predict_end - predict_start
   prediction_dict = ops.bfloat16_to_float32_nested(prediction_dict)
 
-  loss_start = time.time()
+  loss_start = time.perf_counter()
   losses_dict = model.loss(
       prediction_dict, features[fields.InputDataFields.true_image_shape])
-  loss_end = time.time()
+  loss_end = time.perf_counter()
   loss_time = loss_end - loss_start
   losses = [loss_tensor for loss_tensor in losses_dict.values()]
+
+  time_dict = {'predict_time': predict_time,
+               'loss_time': loss_time}
   if add_regularization_loss:
     # TODO(kaftan): As we figure out mixed precision & bfloat 16, we may
     ## need to convert these regularization losses from bfloat16 to float32
     ## as well.
-    regularization_start = time.time()
+    regularization_start = time.perf_counter()
     regularization_losses = model.regularization_losses()
-    regularization_end = time.time()
+    regularization_end = time.perf_counter()
     regularization_time = regularization_end - regularization_start
+    time_dict['regularization_time': regularization_time]
     if regularization_losses:
       regularization_losses = ops.bfloat16_to_float32_nested(
           regularization_losses)
@@ -155,7 +159,7 @@ def _compute_losses_and_predictions_dicts(
   total_loss = tf.add_n(losses, name='total_loss')
   losses_dict['Loss/total_loss'] = total_loss
 
-  return losses_dict, prediction_dict, predict_time, loss_time, regularization_time
+  return losses_dict, prediction_dict, time_dict
 
 
 def _ensure_model_is_built(model, input_dataset, unpad_groundtruth_tensors):
@@ -302,7 +306,7 @@ def eager_train_step(detection_model,
       labels, unpad_groundtruth_tensors=unpad_groundtruth_tensors)
 
   with tf.GradientTape() as tape:
-    losses_dict, _, predict_time, loss_time, regularization_time = _compute_losses_and_predictions_dicts(
+    losses_dict, _, time_dict = _compute_losses_and_predictions_dicts(
         detection_model, features, labels, add_regularization_loss)
 
     total_loss = losses_dict['Loss/total_loss']
@@ -316,6 +320,11 @@ def eager_train_step(detection_model,
     tf.compat.v2.summary.scalar(
         loss_type, losses_dict[loss_type], step=global_step)
 
+  for time_type in time_dict:
+    tf.compat.v2.summary.scalar(
+      time_type, time_dict[time_type], step=global_step
+    )
+
   trainable_variables = detection_model.trainable_variables
 
   gradients = tape.gradient(total_loss, trainable_variables)
@@ -324,9 +333,6 @@ def eager_train_step(detection_model,
     gradients, _ = tf.clip_by_global_norm(gradients, clip_gradients_value)
   optimizer.apply_gradients(zip(gradients, trainable_variables))
   tf.compat.v2.summary.scalar('learning_rate', learning_rate, step=global_step)
-  tf.compat.v2.summary.scalar('predict_time', predict_time, step=global_step)
-  tf.compat.v2.summary.scalar('loss_time', loss_time, step=global_step)
-  tf.compat.v2.summary.scalar('regularization_time', regularization_time, step=global_step)
   if num_visualization > 0:
     tf.compat.v2.summary.image(
         name='train_input_images',
@@ -925,7 +931,7 @@ def eager_eval_loop(
     labels = model_lib.unstack_batch(
         labels, unpad_groundtruth_tensors=unpad_groundtruth_tensors)
 
-    losses_dict, prediction_dict, _, _, _ = _compute_losses_and_predictions_dicts(
+    losses_dict, prediction_dict, _ = _compute_losses_and_predictions_dicts(
         detection_model, features, labels, add_regularization_loss)
     prediction_dict = detection_model.postprocess(
         prediction_dict, features[fields.InputDataFields.true_image_shape])
