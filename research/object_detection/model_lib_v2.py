@@ -121,19 +121,19 @@ def _compute_losses_and_predictions_dicts(
   model_lib.provide_groundtruth(model, labels)
   preprocessed_images = features[fields.InputDataFields.image]
 
-  predict_start = time.perf_counter()
+  predict_start = tf.timestamp()
   prediction_dict = model.predict(
       preprocessed_images,
       features[fields.InputDataFields.true_image_shape],
       **model.get_side_inputs(features))
-  predict_end = time.perf_counter()
+  predict_end = tf.timestamp()
   predict_time = predict_end - predict_start
   prediction_dict = ops.bfloat16_to_float32_nested(prediction_dict)
 
-  loss_start = time.perf_counter()
+  loss_start = tf.timestamp()
   losses_dict = model.loss(
       prediction_dict, features[fields.InputDataFields.true_image_shape])
-  loss_end = time.perf_counter()
+  loss_end = tf.timestamp()
   loss_time = loss_end - loss_start
   losses = [loss_tensor for loss_tensor in losses_dict.values()]
 
@@ -143,9 +143,9 @@ def _compute_losses_and_predictions_dicts(
     # TODO(kaftan): As we figure out mixed precision & bfloat 16, we may
     ## need to convert these regularization losses from bfloat16 to float32
     ## as well.
-    regularization_start = time.perf_counter()
+    regularization_start = tf.timestamp()
     regularization_losses = model.regularization_losses()
-    regularization_end = time.perf_counter()
+    regularization_end = tf.timestamp()
     regularization_time = regularization_end - regularization_start
     time_dict['regularization_time'] = regularization_time
     if regularization_losses:
@@ -158,6 +158,7 @@ def _compute_losses_and_predictions_dicts(
 
   total_loss = tf.add_n(losses, name='total_loss')
   losses_dict['Loss/total_loss'] = total_loss
+  logging.info(time_dict)
 
   return losses_dict, prediction_dict, time_dict
 
@@ -687,13 +688,9 @@ def train_loop(
         for step in range(global_step.value(), train_steps,
                        num_steps_per_iteration):
           # tf.keras.backend.clear_session()
-          # if step % 1000 == 0:
-          #   tf.profiler.experimental.start(model_dir)
-          # with tf.profiler.experimental.Trace('Train', step_num=step):
-          #   loss, losses_dict = _dist_train_step(train_input_iter)
-          # if step % 1000 == 10:
-          #   tf.profiler.experimental.stop()
-
+          if step % 1000 == 0 and step != 0 :
+            with tf.profiler.experimental.Profile(model_dir):
+              loss, losses_dict = _dist_train_step(train_input_iter)
 
           loss, losses_dict = _dist_train_step(train_input_iter)
 
