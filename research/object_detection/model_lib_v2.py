@@ -147,7 +147,7 @@ def _compute_losses_and_predictions_dicts(
     regularization_losses = model.regularization_losses()
     regularization_end = time.perf_counter()
     regularization_time = regularization_end - regularization_start
-    time_dict['regularization_time': regularization_time]
+    time_dict['regularization_time'] = regularization_time
     if regularization_losses:
       regularization_losses = ops.bfloat16_to_float32_nested(
           regularization_losses)
