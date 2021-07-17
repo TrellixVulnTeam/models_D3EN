@@ -688,9 +688,9 @@ def train_loop(
         for step in range(global_step.value(), train_steps,
                        num_steps_per_iteration):
           # tf.keras.backend.clear_session()
-          if step % 5000 == 0 and step != 0 :
-            with tf.profiler.experimental.Profile(model_dir):
-              loss, losses_dict = _dist_train_step(train_input_iter)
+          # if step % 5000 == 0 and step != 0:
+          #   with tf.profiler.experimental.Profile(model_dir):
+          #     loss, losses_dict = _dist_train_step(train_input_iter)
 
           loss, losses_dict = _dist_train_step(train_input_iter)
 
