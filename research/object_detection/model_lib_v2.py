@@ -158,7 +158,6 @@ def _compute_losses_and_predictions_dicts(
 
   total_loss = tf.add_n(losses, name='total_loss')
   losses_dict['Loss/total_loss'] = total_loss
-  logging.info(time_dict)
 
   return losses_dict, prediction_dict, time_dict
 
