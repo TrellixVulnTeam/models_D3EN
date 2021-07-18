@@ -1014,12 +1014,17 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
 
   def _create_flattened_features_for_box_classifier_extractor(self, feature_maps, **side_inputs):
     flattened_feature_maps = tf.reshape(feature_maps, [feature_maps.shape[0], -1])
+    print(flattened_feature_maps)
 
     if self.add_weight_information:
       weight_in_grams = side_inputs['weightInGrams']
       weight_in_grams_repeated = tf.expand_dims(tf.repeat(weight_in_grams, repeats=self.max_num_proposals), axis=1)
+      print(weight_in_grams_repeated)
       if self.weight_method == 'concat':
         flattened_feature_maps = tf.concat([flattened_feature_maps, weight_in_grams_repeated], axis=1)
+      elif self.weight_method == 'multiply':
+        flattened_feature_maps = tf.multiply(flattened_feature_maps, weight_in_grams_repeated)
+        print(flattened_feature_maps)
 
     return flattened_feature_maps
 
