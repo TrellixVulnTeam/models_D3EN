@@ -662,7 +662,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     Raises:
       ValueError: If `predict` is called before `preprocess`.
     """
-    prediction_dict = self._predict_first_stage(preprocessed_inputs)
+    prediction_dict = self._predict_first_stage(preprocessed_inputs, **side_inputs)
 
     if self._number_of_stages >= 2:
       prediction_dict.update(
@@ -683,7 +683,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     ]
     return prediction_dict
 
-  def _predict_first_stage(self, preprocessed_inputs):
+  def _predict_first_stage(self, preprocessed_inputs, **side_inputs):
     """First stage of prediction.
 
     Args:
@@ -716,7 +716,8 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
           features to crop.
     """
     (rpn_box_predictor_features, rpn_features_to_crop, anchors_boxlist,
-     image_shape) = self._extract_rpn_feature_maps(preprocessed_inputs)
+     image_shape) = self._extract_rpn_feature_maps(preprocessed_inputs, **side_inputs)
+
     (rpn_box_encodings, rpn_objectness_predictions_with_background
     ) = self._predict_rpn_proposals(rpn_box_predictor_features)
 
@@ -1156,7 +1157,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     gather_idx = tf.range(k) * num_classes + classes
     return tf.gather(instance_masks, gather_idx)
 
-  def _extract_rpn_feature_maps(self, preprocessed_inputs):
+  def _extract_rpn_feature_maps(self, preprocessed_inputs, **side_inputs):
     """Extracts RPN features.
 
     This function extracts two feature maps: a feature map to be directly
@@ -1183,6 +1184,9 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     rpn_features_to_crop, self.endpoints = self._extract_proposal_features(
         preprocessed_inputs)
 
+    if self.weight_method == 'multiply_rpn_features':
+      rpn_features_to_crop = self._multiply_rpn_features_with_weight_feature(rpn_features_to_crop, **side_inputs)
+
     # Decide if rpn_features_to_crop is a list. If not make it a list
     if not isinstance(rpn_features_to_crop, list):
       rpn_features_to_crop = [rpn_features_to_crop]
@@ -1196,6 +1200,15 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
         self._first_stage_anchor_generator.generate(feature_map_shapes))
     return (rpn_features_to_crop, rpn_features_to_crop,
             anchors, image_shape)
+
+  def _multiply_rpn_features_with_weight_feature(self, rpn_features, **side_inputs):
+    rpn_features_with_weights_multiplied = []
+    weight_features = side_inputs['weightInGrams']
+    for feature in rpn_features:
+      feature_multiplied = tf.multiply(feature, tf.reshape(weight_features, [feature.shape[0], 1, 1, 1]))
+      rpn_features_with_weights_multiplied.append(feature_multiplied)
+
+    return rpn_features_with_weights_multiplied
 
   def _extract_proposal_features(self, preprocessed_inputs):
     if self._feature_extractor_for_proposal_features == (
