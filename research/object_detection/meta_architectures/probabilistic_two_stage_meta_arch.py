@@ -1181,6 +1181,9 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     """
     image_shape = tf.shape(preprocessed_inputs)
 
+    if self.weight_method == 'input-multiply':
+      preprocessed_inputs = self._multiply_input_with_weight_feature(preprocessed_inputs, **side_inputs)
+
     rpn_features_to_crop, self.endpoints = self._extract_proposal_features(
         preprocessed_inputs)
 
@@ -1200,6 +1203,12 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
         self._first_stage_anchor_generator.generate(feature_map_shapes))
     return (rpn_features_to_crop, rpn_features_to_crop,
             anchors, image_shape)
+
+  def _multiply_input_with_weight_feature(self, preprocessed_inputs, **side_inputs):
+    weight_features = side_inputs['weightInGrams']
+    preprocessed_inputs_with_weights = tf.multiply(preprocessed_inputs,
+                                                   tf.reshape(weight_features, [preprocessed_inputs.shape[0], 1, 1, 1]))
+    return preprocessed_inputs_with_weights
 
   def _multiply_rpn_features_with_weight_feature(self, rpn_features, **side_inputs):
     rpn_features_with_weights_multiplied = []
