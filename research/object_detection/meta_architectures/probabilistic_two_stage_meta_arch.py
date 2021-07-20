@@ -1184,7 +1184,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     rpn_features_to_crop, self.endpoints = self._extract_proposal_features(
         preprocessed_inputs)
 
-    if self.weight_method == 'multiply_rpn_features':
+    if self.weight_method == 'rpn-multiply':
       rpn_features_to_crop = self._multiply_rpn_features_with_weight_feature(rpn_features_to_crop, **side_inputs)
 
     # Decide if rpn_features_to_crop is a list. If not make it a list
