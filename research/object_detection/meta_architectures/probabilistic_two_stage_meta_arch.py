@@ -1181,13 +1181,13 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     """
     image_shape = tf.shape(preprocessed_inputs)
 
-    if self.weight_method == 'input-multiply':
+    if self.add_weight_information == True and self.weight_method == 'input-multiply':
       preprocessed_inputs = self._multiply_input_with_weight_feature(preprocessed_inputs, **side_inputs)
 
     rpn_features_to_crop, self.endpoints = self._extract_proposal_features(
         preprocessed_inputs)
 
-    if self.weight_method == 'rpn-multiply':
+    if self.add_weight_information == True and self.weight_method == 'rpn-multiply':
       rpn_features_to_crop = self._multiply_rpn_features_with_weight_feature(rpn_features_to_crop, **side_inputs)
 
     # Decide if rpn_features_to_crop is a list. If not make it a list
