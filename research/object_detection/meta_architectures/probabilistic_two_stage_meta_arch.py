@@ -1211,8 +1211,8 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     return preprocessed_inputs_with_weights
 
   def _multiply_rpn_features_with_weight_feature(self, rpn_features, **side_inputs):
-    rpn_features_with_weights_multiplied = []
     weight_features = side_inputs['weightInGrams']
+    rpn_features_with_weights_multiplied = []
     for feature in rpn_features:
       feature_multiplied = tf.multiply(feature, tf.reshape(weight_features, [feature.shape[0], 1, 1, 1]))
       rpn_features_with_weights_multiplied.append(feature_multiplied)
