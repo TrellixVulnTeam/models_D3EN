@@ -14,13 +14,16 @@ import "object_detection/protos/region_similarity_calculator.proto";
 import "object_detection/protos/fpn.proto";
 
 // Configuration for Single Shot Detection (SSD) models.
-// Next id: 28
+// Next id: 29
 message Ssd {
   // Number of classes to predict.
   optional int32 num_classes = 1;
 
   // Wether to add Weight Information as Side Input to the model.
   optional bool add_weight_information = 27 [default = false];
+
+  // Which version of weight method to use ('input-multiply', 'fpn-multiply')
+  optional string weight_method = 28 [default = 'input-multiply'];
 
   // Image resizer for preprocessing the input image.
   optional ImageResizer image_resizer = 2;

@@ -275,6 +275,7 @@ class SSDMetaArch(model.DetectionModel):
                hard_example_miner,
                target_assigner_instance,
                add_weight_information,
+               weight_method,
                add_summaries=True,
                normalize_loc_loss_by_codesize=False,
                freeze_batchnorm=False,
@@ -383,6 +384,7 @@ class SSDMetaArch(model.DetectionModel):
     self._explicit_background_class = explicit_background_class
 
     self._add_weight_information = add_weight_information
+    self._weight_method = weight_method
 
     if add_background_class and explicit_background_class:
       raise ValueError("Cannot have both 'add_background_class' and"
@@ -589,24 +591,14 @@ class SSDMetaArch(model.DetectionModel):
       batchnorm_updates_collections = None
     else:
       batchnorm_updates_collections = tf.GraphKeys.UPDATE_OPS
-    if self._feature_extractor.is_keras_model:
-      feature_maps = self._feature_extractor(preprocessed_inputs)
-    else:
-      with slim.arg_scope([slim.batch_norm],
-                          is_training=(self._is_training and
-                                       not self._freeze_batchnorm),
-                          updates_collections=batchnorm_updates_collections):
-        with tf.variable_scope(None, self._extract_features_scope,
-                               [preprocessed_inputs]):
-          feature_maps = self._feature_extractor.extract_features(
-              preprocessed_inputs)
 
-    print(self._add_weight_information)
+    if self._add_weight_information == True and self._weight_method == 'input-multiply':
+      preprocessed_inputs = self._multiply_input_with_weight_feature(preprocessed_inputs, **side_inputs)
 
-    if self._add_weight_information:
-      print(feature_maps[0])
-      print(tf.math.sigmoid(feature_maps[0]))
-      print(side_inputs['weightInGrams'])
+    feature_maps = self._feature_extractor(preprocessed_inputs)
+
+    if self._add_weight_information == True and self._weight_method == 'fpn-multiply':
+      feature_maps = self._multiply_fpn_features_with_weight_feature(feature_maps, **side_inputs)
 
     feature_map_spatial_dims = self._get_feature_map_spatial_dims(
         feature_maps)
@@ -617,15 +609,8 @@ class SSDMetaArch(model.DetectionModel):
         im_height=image_shape[1],
         im_width=image_shape[2])
     self._anchors = box_list_ops.concatenate(boxlist_list)
-    if self._box_predictor.is_keras_model:
-      predictor_results_dict = self._box_predictor(feature_maps)
-    else:
-      with slim.arg_scope([slim.batch_norm],
-                          is_training=(self._is_training and
-                                       not self._freeze_batchnorm),
-                          updates_collections=batchnorm_updates_collections):
-        predictor_results_dict = self._box_predictor.predict(
-            feature_maps, self._anchor_generator.num_anchors_per_location())
+
+    predictor_results_dict = self._box_predictor(feature_maps)
     predictions_dict = {
         'preprocessed_inputs':
             preprocessed_inputs,
@@ -649,6 +634,19 @@ class SSDMetaArch(model.DetectionModel):
     self._batched_prediction_tensor_names = [x for x in predictions_dict
                                              if x != 'anchors']
     return predictions_dict
+
+  def _multiply_input_with_weight_feature(self, inputs, **side_inputs):
+    weight_features = side_inputs['weightInGrams']
+    inputs_with_weights = tf.multiply(inputs, tf.reshape(weight_features, [inputs.shape[0], 1, 1, 1]))
+    return inputs_with_weights
+
+  def _multiply_fpn_features_with_weight_feature(self, feature_maps, **side_inputs):
+    weight_features = side_inputs['weightInGrams']
+    fpn_features_with_weight_multiplied = []
+    for feature in feature_maps:
+      feature_multiplied = tf.multiply(feature, tf.reshape(weight_features, [feature.shape[0], 1, 1, 1]))
+      fpn_features_with_weight_multiplied.append(feature_multiplied)
+    return fpn_features_with_weight_multiplied
 
   def _raw_detections_and_feature_map_inds(self, box_encodings, boxlist_list):
     anchors = self._anchors.get()
