@@ -377,6 +377,8 @@ def provide_groundtruth(model, labels):
   if fields.InputDataFields.groundtruth_not_exhaustive_classes in labels:
     gt_not_exhaustive_classes = labels[
         fields.InputDataFields.groundtruth_not_exhaustive_classes]
+  if fields.InputDataFields.weightInGrams in labels:
+    gt_weightInGrams_list = labels[fields.InputDataFields.weightInGrams]
   model.provide_groundtruth(
       groundtruth_boxes_list=gt_boxes_list,
       groundtruth_classes_list=gt_classes_list,
@@ -396,7 +398,8 @@ def provide_groundtruth(model, labels):
       groundtruth_verified_neg_classes=gt_verified_neg_classes,
       groundtruth_not_exhaustive_classes=gt_not_exhaustive_classes,
       groundtruth_keypoint_depths_list=gt_keypoint_depths_list,
-      groundtruth_keypoint_depth_weights_list=gt_keypoint_depth_weights_list)
+      groundtruth_keypoint_depth_weights_list=gt_keypoint_depth_weights_list,
+      groundtruth_weightInGrams_list=gt_weightInGrams_list)
 
 
 def create_model_fn(detection_model_fn, configs, hparams=None, use_tpu=False,
