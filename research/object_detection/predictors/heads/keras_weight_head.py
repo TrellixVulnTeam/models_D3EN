@@ -9,7 +9,8 @@ class WeightSharedConvolutionalWeightHead(head.KerasHead):
 	             use_dropout=False,
 	             dropout_keep_prob=0.8,
 	             use_depthwise=False,
-	             apply_conv_hyperparams_to_heads=False):
+	             apply_conv_hyperparams_to_heads=False,
+	             name=None):
 		super(WeightSharedConvolutionalWeightHead, self).__init__(name=name)
 		self._kernel_size = kernel_size
 		self._use_dropout = use_dropout
@@ -49,6 +50,9 @@ class WeightSharedConvolutionalWeightHead(head.KerasHead):
 					**conv_hyperparams.params(use_bias=True)
 				)
 			)
+		self._weight_predictor_layers.append(
+			tf.keras.layers.GlobalAveragePooling2D()
+		)
 
 	def _predict(self, features):
 		"""Predicts weight.
@@ -69,3 +73,4 @@ class WeightSharedConvolutionalWeightHead(head.KerasHead):
 			batch_size = tf.shape(features)[0]
 
 		weight_predictions = tf.reshape(weight_predictions, [batch_size, 1])
+		return weight_predictions
