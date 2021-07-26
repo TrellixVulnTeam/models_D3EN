@@ -29,6 +29,7 @@ from object_detection.predictors.heads import keras_box_head
 from object_detection.predictors.heads import keras_class_head
 from object_detection.predictors.heads import keras_mask_head
 from object_detection.predictors.heads import mask_head
+from object_detection.predictors.heads import keras_weight_head
 from object_detection.protos import box_predictor_pb2
 
 
@@ -323,6 +324,7 @@ def build_weight_shared_convolutional_keras_box_predictor(
     box_code_size,
     kernel_size=3,
     add_background_class=True,
+    add_weight_as_output=False,
     class_prediction_bias_init=0.0,
     use_dropout=False,
     dropout_keep_prob=0.8,
@@ -418,6 +420,15 @@ def build_weight_shared_convolutional_keras_box_predictor(
       score_converter_fn=score_converter_fn,
       name='WeightSharedConvolutionalClassHead')
   other_heads = {}
+  if add_weight_as_output:
+    other_heads['weight_predictions'] = keras_weight_head.WeightSharedConvolutionalWeightHead(
+      conv_hyperparams=conv_hyperparams,
+      kernel_size=kernel_size,
+      use_dropout=use_dropout,
+      dropout_keep_prob=dropout_keep_prob,
+      use_depthwise=use_depthwise,
+      apply_conv_hyperparams_to_heads=apply_conv_hyperparams_to_heads
+    )
 
   return (
       convolutional_keras_box_predictor.WeightSharedConvolutionalBoxPredictor(
@@ -820,7 +831,7 @@ def build(argscope_fn, box_predictor_config, is_training, num_classes,
 
 def build_keras(hyperparams_fn, freeze_batchnorm, inplace_batchnorm_update,
                 num_predictions_per_location_list, box_predictor_config,
-                is_training, num_classes, add_background_class=True):
+                is_training, num_classes, add_background_class=True, add_weight_as_output=False):
   """Builds a Keras-based box predictor based on the configuration.
 
   Builds Keras-based box predictor based on the configuration.
@@ -916,6 +927,7 @@ def build_keras(hyperparams_fn, freeze_batchnorm, inplace_batchnorm_update,
     return build_weight_shared_convolutional_keras_box_predictor(
         is_training=is_training,
         num_classes=num_classes,
+        add_weight_as_output = add_weight_as_output,
         conv_hyperparams=conv_hyperparams,
         freeze_batchnorm=freeze_batchnorm,
         inplace_batchnorm_update=inplace_batchnorm_update,

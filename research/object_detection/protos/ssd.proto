@@ -25,6 +25,8 @@ message Ssd {
   // Which version of weight method to use ('input-multiply', 'fpn-multiply')
   optional string weight_method = 28 [default = 'input-multiply'];
 
+  optional bool add_weight_as_output = 29 [default = false];
+
   // Image resizer for preprocessing the input image.
   optional ImageResizer image_resizer = 2;
 

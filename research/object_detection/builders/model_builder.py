@@ -398,6 +398,10 @@ def _build_ssd_model(ssd_config, is_training, add_summaries):
   num_classes = ssd_config.num_classes
   _check_feature_extractor_exists(ssd_config.feature_extractor.type)
 
+  add_weight_information = ssd_config.add_weight_information
+  weight_method = ssd_config.weight_method
+  add_weight_as_output = ssd_config.add_weight_as_output
+
   # Feature extractor
   feature_extractor = _build_ssd_feature_extractor(
       feature_extractor_config=ssd_config.feature_extractor,
@@ -422,7 +426,8 @@ def _build_ssd_model(ssd_config, is_training, add_summaries):
         box_predictor_config=ssd_config.box_predictor,
         is_training=is_training,
         num_classes=num_classes,
-        add_background_class=ssd_config.add_background_class)
+        add_background_class=ssd_config.add_background_class,
+        add_weight_as_output=add_weight_as_output)
   else:
     ssd_box_predictor = box_predictor_builder.build(
         hyperparams_builder.build, ssd_config.box_predictor, is_training,
@@ -446,14 +451,14 @@ def _build_ssd_model(ssd_config, is_training, add_summaries):
       box_coder,
       negative_class_weight=negative_class_weight)
 
-  add_weight_information = ssd_config.add_weight_information
-
   ssd_meta_arch_fn = ssd_meta_arch.SSDMetaArch
   kwargs = {}
 
   return ssd_meta_arch_fn(
       is_training=is_training,
       add_weight_information=add_weight_information,
+      weight_method=weight_method,
+      add_weight_as_output=add_weight_as_output,
       anchor_generator=anchor_generator,
       box_predictor=ssd_box_predictor,
       box_coder=box_coder,

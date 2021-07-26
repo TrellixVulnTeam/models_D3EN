@@ -276,6 +276,7 @@ class SSDMetaArch(model.DetectionModel):
                target_assigner_instance,
                add_weight_information,
                weight_method,
+               add_weight_as_output,
                add_summaries=True,
                normalize_loc_loss_by_codesize=False,
                freeze_batchnorm=False,
@@ -385,6 +386,7 @@ class SSDMetaArch(model.DetectionModel):
 
     self._add_weight_information = add_weight_information
     self._weight_method = weight_method
+    self._add_weight_as_output = add_weight_as_output
 
     if add_background_class and explicit_background_class:
       raise ValueError("Cannot have both 'add_background_class' and"
@@ -574,17 +576,20 @@ class SSDMetaArch(model.DetectionModel):
           [batch_size, num_anchors, num_classes+1] containing class predictions
           (logits) for each of the anchors.  Note that this tensor *includes*
           background class predictions (at class index 0).
-        4) feature_maps: a list of tensors where the ith tensor has shape
+        4) weight_predictions: 2-D float tensor of shape [batch_size, 1] containing
+           the weight prediction for each image in the batch
+           (Only if self._add_weight_as_output is true)
+        5) feature_maps: a list of tensors where the ith tensor has shape
           [batch, height_i, width_i, depth_i].
-        5) anchors: 2-D float tensor of shape [num_anchors, 4] containing
+        6) anchors: 2-D float tensor of shape [num_anchors, 4] containing
           the generated anchors in normalized coordinates.
-        6) final_anchors: 3-D float tensor of shape [batch_size, num_anchors, 4]
+        7) final_anchors: 3-D float tensor of shape [batch_size, num_anchors, 4]
           containing the generated anchors in normalized coordinates.
         If self._return_raw_detections_during_predict is True, the dictionary
         will also contain:
-        7) raw_detection_boxes: a 4-D float32 tensor with shape
+        8) raw_detection_boxes: a 4-D float32 tensor with shape
           [batch_size, self.max_num_proposals, 4] in normalized coordinates.
-        8) raw_detection_feature_map_indices: a 3-D int32 tensor with shape
+        9) raw_detection_feature_map_indices: a 3-D int32 tensor with shape
           [batch_size, self.max_num_proposals].
     """
     if self._inplace_batchnorm_update:
@@ -912,6 +917,20 @@ class SSDMetaArch(model.DetectionModel):
           weights=batch_cls_weights,
           losses_mask=losses_mask)
 
+      if self._add_weight_as_output:
+        if self.groundtruth_has_field(fields.InputDataFields.weightInGrams):
+          weightInGrams_list = self.groundtruth_lists(fields.InputDataFields.weightInGrams)
+          batch_weightInGrams = tf.stack(weightInGrams_list)
+
+        weightInGrams_losses = tf.losses.huber_loss(batch_weightInGrams,
+                                                    prediction_dict['weight_predictions'],
+                                                    delta=1.0,
+                                                    loss_collection=None,
+                                                    reduction=tf.losses.Reduction.NONE)
+
+        weightInGrams_loss = tf.reduce_sum(weightInGrams_losses)
+
+
       if self._expected_loss_weights_fn:
         # Need to compute losses for assigned targets against the
         # unmatched_class_label as well as their assigned targets.
@@ -983,6 +1002,9 @@ class SSDMetaArch(model.DetectionModel):
           'Loss/localization_loss': localization_loss,
           'Loss/classification_loss': classification_loss
       }
+
+      if self._add_weight_as_output:
+        loss_dict['Loss/weightInGrams_loss'] = weightInGrams_loss
 
 
     return loss_dict
