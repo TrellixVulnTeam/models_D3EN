@@ -632,6 +632,8 @@ class SSDMetaArch(model.DetectionModel):
       if (prediction_key == 'box_encodings' and prediction.shape.ndims == 4 and
           prediction.shape[2] == 1):
         prediction = tf.squeeze(prediction, axis=2)
+      if prediction_key == 'weight_predictions':
+        prediction = tf.reduce_mean(prediction, axis=1)
       predictions_dict[prediction_key] = prediction
     if self._return_raw_detections_during_predict:
       predictions_dict.update(self._raw_detections_and_feature_map_inds(
@@ -918,6 +920,7 @@ class SSDMetaArch(model.DetectionModel):
           losses_mask=losses_mask)
 
       if self._add_weight_as_output:
+        batch_weightInGrams = None
         if self.groundtruth_has_field(fields.InputDataFields.weightInGrams):
           weightInGrams_list = self.groundtruth_lists(fields.InputDataFields.weightInGrams)
           batch_weightInGrams = tf.stack(weightInGrams_list)
