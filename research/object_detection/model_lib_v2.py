@@ -676,8 +676,6 @@ def train_loop(
 
         train_input_iter = iter(train_input)
 
-        if int(global_step.value()) == 0:
-          manager.save()
 
         checkpointed_step = int(global_step.value())
         logged_step = global_step.value()
