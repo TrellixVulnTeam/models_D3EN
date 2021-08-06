@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='object_detection.protos',
   syntax='proto2',
   serialized_options=None,
-  serialized_pb=_b('\n$object_detection/protos/losses.proto\x12\x17object_detection.protos\"\xfe\x05\n\x04Loss\x12\x44\n\x11localization_loss\x18\x01 \x01(\x0b\x32).object_detection.protos.LocalizationLoss\x12H\n\x13\x63lassification_loss\x18\x02 \x01(\x0b\x32+.object_detection.protos.ClassificationLoss\x12\x45\n\x12hard_example_miner\x18\x03 \x01(\x0b\x32).object_detection.protos.HardExampleMiner\x12 \n\x15\x63lassification_weight\x18\x04 \x01(\x02:\x01\x31\x12\x1e\n\x13localization_weight\x18\x05 \x01(\x02:\x01\x31\x12M\n\x16random_example_sampler\x18\x06 \x01(\x0b\x32-.object_detection.protos.RandomExampleSampler\x12I\n\x11\x65qualization_loss\x18\x07 \x01(\x0b\x32..object_detection.protos.Loss.EqualizationLoss\x12V\n\x15\x65xpected_loss_weights\x18\x12 \x01(\x0e\x32\x31.object_detection.protos.Loss.ExpectedLossWeights:\x04NONE\x12#\n\x18min_num_negative_samples\x18\x13 \x01(\x02:\x01\x30\x12*\n\x1f\x64\x65sired_negative_sampling_ratio\x18\x14 \x01(\x02:\x01\x33\x1a?\n\x10\x45qualizationLoss\x12\x11\n\x06weight\x18\x01 \x01(\x02:\x01\x30\x12\x18\n\x10\x65xclude_prefixes\x18\x02 \x03(\t\"Y\n\x13\x45xpectedLossWeights\x12\x08\n\x04NONE\x10\x00\x12\x15\n\x11\x45XPECTED_SAMPLING\x10\x01\x12!\n\x1dREWEIGHTING_UNMATCHED_ANCHORS\x10\x02\"\xb7\x03\n\x10LocalizationLoss\x12J\n\x0bweighted_l2\x18\x01 \x01(\x0b\x32\x33.object_detection.protos.WeightedL2LocalizationLossH\x00\x12W\n\x12weighted_smooth_l1\x18\x02 \x01(\x0b\x32\x39.object_detection.protos.WeightedSmoothL1LocalizationLossH\x00\x12L\n\x0cweighted_iou\x18\x03 \x01(\x0b\x32\x34.object_detection.protos.WeightedIOULocalizationLossH\x00\x12K\n\x14l1_localization_loss\x18\x04 \x01(\x0b\x32+.object_detection.protos.L1LocalizationLossH\x00\x12N\n\rweighted_giou\x18\x05 \x01(\x0b\x32\x35.object_detection.protos.WeightedGIOULocalizationLossH\x00\x42\x13\n\x11localization_loss\">\n\x1aWeightedL2LocalizationLoss\x12 \n\x11\x61nchorwise_output\x18\x01 \x01(\x08:\x05\x66\x61lse\"V\n WeightedSmoothL1LocalizationLoss\x12 \n\x11\x61nchorwise_output\x18\x01 \x01(\x08:\x05\x66\x61lse\x12\x10\n\x05\x64\x65lta\x18\x02 \x01(\x02:\x01\x31\"\x1d\n\x1bWeightedIOULocalizationLoss\"\x14\n\x12L1LocalizationLoss\"\x1e\n\x1cWeightedGIOULocalizationLoss\"\xd1\x05\n\x12\x43lassificationLoss\x12V\n\x10weighted_sigmoid\x18\x01 \x01(\x0b\x32:.object_detection.protos.WeightedSigmoidClassificationLossH\x00\x12V\n\x10weighted_softmax\x18\x02 \x01(\x0b\x32:.object_detection.protos.WeightedSoftmaxClassificationLossH\x00\x12j\n\x17weighted_logits_softmax\x18\x05 \x01(\x0b\x32G.object_detection.protos.WeightedSoftmaxClassificationAgainstLogitsLossH\x00\x12^\n\x14\x62ootstrapped_sigmoid\x18\x03 \x01(\x0b\x32>.object_detection.protos.BootstrappedSigmoidClassificationLossH\x00\x12Y\n\x16weighted_sigmoid_focal\x18\x04 \x01(\x0b\x32\x37.object_detection.protos.SigmoidFocalClassificationLossH\x00\x12g\n#penalty_reduced_logistic_focal_loss\x18\x06 \x01(\x0b\x32\x38.object_detection.protos.PenaltyReducedLogisticFocalLossH\x00\x12\x64\n!weighted_dice_classification_loss\x18\x07 \x01(\x0b\x32\x37.object_detection.protos.WeightedDiceClassificationLossH\x00\x42\x15\n\x13\x63lassification_loss\"E\n!WeightedSigmoidClassificationLoss\x12 \n\x11\x61nchorwise_output\x18\x01 \x01(\x08:\x05\x66\x61lse\"c\n\x1eSigmoidFocalClassificationLoss\x12 \n\x11\x61nchorwise_output\x18\x01 \x01(\x08:\x05\x66\x61lse\x12\x10\n\x05gamma\x18\x02 \x01(\x02:\x01\x32\x12\r\n\x05\x61lpha\x18\x03 \x01(\x02\"]\n!WeightedSoftmaxClassificationLoss\x12 \n\x11\x61nchorwise_output\x18\x01 \x01(\x08:\x05\x66\x61lse\x12\x16\n\x0blogit_scale\x18\x02 \x01(\x02:\x01\x31\"j\n.WeightedSoftmaxClassificationAgainstLogitsLoss\x12 \n\x11\x61nchorwise_output\x18\x01 \x01(\x08:\x05\x66\x61lse\x12\x16\n\x0blogit_scale\x18\x02 \x01(\x02:\x01\x31\"w\n%BootstrappedSigmoidClassificationLoss\x12\r\n\x05\x61lpha\x18\x01 \x01(\x02\x12\x1d\n\x0ehard_bootstrap\x18\x02 \x01(\x08:\x05\x66\x61lse\x12 \n\x11\x61nchorwise_output\x18\x03 \x01(\x08:\x05\x66\x61lse\">\n\x1fPenaltyReducedLogisticFocalLoss\x12\r\n\x05\x61lpha\x18\x01 \x01(\x02\x12\x0c\n\x04\x62\x65ta\x18\x02 \x01(\x02\"\xa1\x02\n\x10HardExampleMiner\x12\x1d\n\x11num_hard_examples\x18\x01 \x01(\x05:\x02\x36\x34\x12\x1a\n\riou_threshold\x18\x02 \x01(\x02:\x03\x30.7\x12K\n\tloss_type\x18\x03 \x01(\x0e\x32\x32.object_detection.protos.HardExampleMiner.LossType:\x04\x42OTH\x12%\n\x1amax_negatives_per_positive\x18\x04 \x01(\x05:\x01\x30\x12\"\n\x17min_negatives_per_image\x18\x05 \x01(\x05:\x01\x30\":\n\x08LossType\x12\x08\n\x04\x42OTH\x10\x00\x12\x12\n\x0e\x43LASSIFICATION\x10\x01\x12\x10\n\x0cLOCALIZATION\x10\x02\">\n\x14RandomExampleSampler\x12&\n\x18positive_sample_fraction\x18\x01 \x01(\x02:\x04\x30.01\"F\n\x1eWeightedDiceClassificationLoss\x12$\n\x15squared_normalization\x18\x01 \x01(\x08:\x05\x66\x61lse')
+  serialized_pb=_b('\n$object_detection/protos/losses.proto\x12\x17object_detection.protos\"\xfe\x05\n\x04Loss\x12\x44\n\x11localization_loss\x18\x01 \x01(\x0b\x32).object_detection.protos.LocalizationLoss\x12H\n\x13\x63lassification_loss\x18\x02 \x01(\x0b\x32+.object_detection.protos.ClassificationLoss\x12\x45\n\x12hard_example_miner\x18\x03 \x01(\x0b\x32).object_detection.protos.HardExampleMiner\x12 \n\x15\x63lassification_weight\x18\x04 \x01(\x02:\x01\x31\x12\x1e\n\x13localization_weight\x18\x05 \x01(\x02:\x01\x31\x12M\n\x16random_example_sampler\x18\x06 \x01(\x0b\x32-.object_detection.protos.RandomExampleSampler\x12I\n\x11\x65qualization_loss\x18\x07 \x01(\x0b\x32..object_detection.protos.Loss.EqualizationLoss\x12V\n\x15\x65xpected_loss_weights\x18\x12 \x01(\x0e\x32\x31.object_detection.protos.Loss.ExpectedLossWeights:\x04NONE\x12#\n\x18min_num_negative_samples\x18\x13 \x01(\x02:\x01\x30\x12*\n\x1f\x64\x65sired_negative_sampling_ratio\x18\x14 \x01(\x02:\x01\x33\x1a?\n\x10\x45qualizationLoss\x12\x11\n\x06weight\x18\x01 \x01(\x02:\x01\x30\x12\x18\n\x10\x65xclude_prefixes\x18\x02 \x03(\t\"Y\n\x13\x45xpectedLossWeights\x12\x08\n\x04NONE\x10\x00\x12\x15\n\x11\x45XPECTED_SAMPLING\x10\x01\x12!\n\x1dREWEIGHTING_UNMATCHED_ANCHORS\x10\x02\"\xb7\x03\n\x10LocalizationLoss\x12J\n\x0bweighted_l2\x18\x01 \x01(\x0b\x32\x33.object_detection.protos.WeightedL2LocalizationLossH\x00\x12W\n\x12weighted_smooth_l1\x18\x02 \x01(\x0b\x32\x39.object_detection.protos.WeightedSmoothL1LocalizationLossH\x00\x12L\n\x0cweighted_iou\x18\x03 \x01(\x0b\x32\x34.object_detection.protos.WeightedIOULocalizationLossH\x00\x12K\n\x14l1_localization_loss\x18\x04 \x01(\x0b\x32+.object_detection.protos.L1LocalizationLossH\x00\x12N\n\rweighted_giou\x18\x05 \x01(\x0b\x32\x35.object_detection.protos.WeightedGIOULocalizationLossH\x00\x42\x13\n\x11localization_loss\">\n\x1aWeightedL2LocalizationLoss\x12 \n\x11\x61nchorwise_output\x18\x01 \x01(\x08:\x05\x66\x61lse\"V\n WeightedSmoothL1LocalizationLoss\x12 \n\x11\x61nchorwise_output\x18\x01 \x01(\x08:\x05\x66\x61lse\x12\x10\n\x05\x64\x65lta\x18\x02 \x01(\x02:\x01\x31\"\x1d\n\x1bWeightedIOULocalizationLoss\"\x14\n\x12L1LocalizationLoss\"\x1e\n\x1cWeightedGIOULocalizationLoss\"\xac\x06\n\x12\x43lassificationLoss\x12V\n\x10weighted_sigmoid\x18\x01 \x01(\x0b\x32:.object_detection.protos.WeightedSigmoidClassificationLossH\x00\x12V\n\x10weighted_softmax\x18\x02 \x01(\x0b\x32:.object_detection.protos.WeightedSoftmaxClassificationLossH\x00\x12j\n\x17weighted_logits_softmax\x18\x05 \x01(\x0b\x32G.object_detection.protos.WeightedSoftmaxClassificationAgainstLogitsLossH\x00\x12^\n\x14\x62ootstrapped_sigmoid\x18\x03 \x01(\x0b\x32>.object_detection.protos.BootstrappedSigmoidClassificationLossH\x00\x12Y\n\x16weighted_sigmoid_focal\x18\x04 \x01(\x0b\x32\x37.object_detection.protos.SigmoidFocalClassificationLossH\x00\x12g\n#penalty_reduced_logistic_focal_loss\x18\x06 \x01(\x0b\x32\x38.object_detection.protos.PenaltyReducedLogisticFocalLossH\x00\x12\x64\n!weighted_dice_classification_loss\x18\x07 \x01(\x0b\x32\x37.object_detection.protos.WeightedDiceClassificationLossH\x00\x12Y\n\x16weighted_softmax_focal\x18\x08 \x01(\x0b\x32\x37.object_detection.protos.SoftmaxFocalClassificationLossH\x00\x42\x15\n\x13\x63lassification_loss\"E\n!WeightedSigmoidClassificationLoss\x12 \n\x11\x61nchorwise_output\x18\x01 \x01(\x08:\x05\x66\x61lse\"c\n\x1eSigmoidFocalClassificationLoss\x12 \n\x11\x61nchorwise_output\x18\x01 \x01(\x08:\x05\x66\x61lse\x12\x10\n\x05gamma\x18\x02 \x01(\x02:\x01\x32\x12\r\n\x05\x61lpha\x18\x03 \x01(\x02\"A\n\x1eSoftmaxFocalClassificationLoss\x12\x10\n\x05gamma\x18\x02 \x01(\x02:\x01\x32\x12\r\n\x05\x61lpha\x18\x03 \x01(\x02\"]\n!WeightedSoftmaxClassificationLoss\x12 \n\x11\x61nchorwise_output\x18\x01 \x01(\x08:\x05\x66\x61lse\x12\x16\n\x0blogit_scale\x18\x02 \x01(\x02:\x01\x31\"j\n.WeightedSoftmaxClassificationAgainstLogitsLoss\x12 \n\x11\x61nchorwise_output\x18\x01 \x01(\x08:\x05\x66\x61lse\x12\x16\n\x0blogit_scale\x18\x02 \x01(\x02:\x01\x31\"w\n%BootstrappedSigmoidClassificationLoss\x12\r\n\x05\x61lpha\x18\x01 \x01(\x02\x12\x1d\n\x0ehard_bootstrap\x18\x02 \x01(\x08:\x05\x66\x61lse\x12 \n\x11\x61nchorwise_output\x18\x03 \x01(\x08:\x05\x66\x61lse\">\n\x1fPenaltyReducedLogisticFocalLoss\x12\r\n\x05\x61lpha\x18\x01 \x01(\x02\x12\x0c\n\x04\x62\x65ta\x18\x02 \x01(\x02\"\xa1\x02\n\x10HardExampleMiner\x12\x1d\n\x11num_hard_examples\x18\x01 \x01(\x05:\x02\x36\x34\x12\x1a\n\riou_threshold\x18\x02 \x01(\x02:\x03\x30.7\x12K\n\tloss_type\x18\x03 \x01(\x0e\x32\x32.object_detection.protos.HardExampleMiner.LossType:\x04\x42OTH\x12%\n\x1amax_negatives_per_positive\x18\x04 \x01(\x05:\x01\x30\x12\"\n\x17min_negatives_per_image\x18\x05 \x01(\x05:\x01\x30\":\n\x08LossType\x12\x08\n\x04\x42OTH\x10\x00\x12\x12\n\x0e\x43LASSIFICATION\x10\x01\x12\x10\n\x0cLOCALIZATION\x10\x02\">\n\x14RandomExampleSampler\x12&\n\x18positive_sample_fraction\x18\x01 \x01(\x02:\x04\x30.01\"F\n\x1eWeightedDiceClassificationLoss\x12$\n\x15squared_normalization\x18\x01 \x01(\x08:\x05\x66\x61lse')
 )
 
 
@@ -71,8 +71,8 @@ _HARDEXAMPLEMINER_LOSSTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=3029,
-  serialized_end=3087,
+  serialized_start=3187,
+  serialized_end=3245,
 )
 _sym_db.RegisterEnumDescriptor(_HARDEXAMPLEMINER_LOSSTYPE)
 
@@ -468,6 +468,13 @@ _CLASSIFICATIONLOSS = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='weighted_softmax_focal', full_name='object_detection.protos.ClassificationLoss.weighted_softmax_focal', index=7,
+      number=8, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -484,7 +491,7 @@ _CLASSIFICATIONLOSS = _descriptor.Descriptor(
       index=0, containing_type=None, fields=[]),
   ],
   serialized_start=1514,
-  serialized_end=2235,
+  serialized_end=2326,
 )
 
 
@@ -514,8 +521,8 @@ _WEIGHTEDSIGMOIDCLASSIFICATIONLOSS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2237,
-  serialized_end=2306,
+  serialized_start=2328,
+  serialized_end=2397,
 )
 
 
@@ -559,8 +566,46 @@ _SIGMOIDFOCALCLASSIFICATIONLOSS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2308,
-  serialized_end=2407,
+  serialized_start=2399,
+  serialized_end=2498,
+)
+
+
+_SOFTMAXFOCALCLASSIFICATIONLOSS = _descriptor.Descriptor(
+  name='SoftmaxFocalClassificationLoss',
+  full_name='object_detection.protos.SoftmaxFocalClassificationLoss',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='gamma', full_name='object_detection.protos.SoftmaxFocalClassificationLoss.gamma', index=0,
+      number=2, type=2, cpp_type=6, label=1,
+      has_default_value=True, default_value=float(2),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='alpha', full_name='object_detection.protos.SoftmaxFocalClassificationLoss.alpha', index=1,
+      number=3, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto2',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=2500,
+  serialized_end=2565,
 )
 
 
@@ -597,8 +642,8 @@ _WEIGHTEDSOFTMAXCLASSIFICATIONLOSS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2409,
-  serialized_end=2502,
+  serialized_start=2567,
+  serialized_end=2660,
 )
 
 
@@ -635,8 +680,8 @@ _WEIGHTEDSOFTMAXCLASSIFICATIONAGAINSTLOGITSLOSS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2504,
-  serialized_end=2610,
+  serialized_start=2662,
+  serialized_end=2768,
 )
 
 
@@ -680,8 +725,8 @@ _BOOTSTRAPPEDSIGMOIDCLASSIFICATIONLOSS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2612,
-  serialized_end=2731,
+  serialized_start=2770,
+  serialized_end=2889,
 )
 
 
@@ -718,8 +763,8 @@ _PENALTYREDUCEDLOGISTICFOCALLOSS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2733,
-  serialized_end=2795,
+  serialized_start=2891,
+  serialized_end=2953,
 )
 
 
@@ -778,8 +823,8 @@ _HARDEXAMPLEMINER = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2798,
-  serialized_end=3087,
+  serialized_start=2956,
+  serialized_end=3245,
 )
 
 
@@ -809,8 +854,8 @@ _RANDOMEXAMPLESAMPLER = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3089,
-  serialized_end=3151,
+  serialized_start=3247,
+  serialized_end=3309,
 )
 
 
@@ -840,8 +885,8 @@ _WEIGHTEDDICECLASSIFICATIONLOSS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3153,
-  serialized_end=3223,
+  serialized_start=3311,
+  serialized_end=3381,
 )
 
 _LOSS_EQUALIZATIONLOSS.containing_type = _LOSS
@@ -879,6 +924,7 @@ _CLASSIFICATIONLOSS.fields_by_name['bootstrapped_sigmoid'].message_type = _BOOTS
 _CLASSIFICATIONLOSS.fields_by_name['weighted_sigmoid_focal'].message_type = _SIGMOIDFOCALCLASSIFICATIONLOSS
 _CLASSIFICATIONLOSS.fields_by_name['penalty_reduced_logistic_focal_loss'].message_type = _PENALTYREDUCEDLOGISTICFOCALLOSS
 _CLASSIFICATIONLOSS.fields_by_name['weighted_dice_classification_loss'].message_type = _WEIGHTEDDICECLASSIFICATIONLOSS
+_CLASSIFICATIONLOSS.fields_by_name['weighted_softmax_focal'].message_type = _SOFTMAXFOCALCLASSIFICATIONLOSS
 _CLASSIFICATIONLOSS.oneofs_by_name['classification_loss'].fields.append(
   _CLASSIFICATIONLOSS.fields_by_name['weighted_sigmoid'])
 _CLASSIFICATIONLOSS.fields_by_name['weighted_sigmoid'].containing_oneof = _CLASSIFICATIONLOSS.oneofs_by_name['classification_loss']
@@ -900,6 +946,9 @@ _CLASSIFICATIONLOSS.fields_by_name['penalty_reduced_logistic_focal_loss'].contai
 _CLASSIFICATIONLOSS.oneofs_by_name['classification_loss'].fields.append(
   _CLASSIFICATIONLOSS.fields_by_name['weighted_dice_classification_loss'])
 _CLASSIFICATIONLOSS.fields_by_name['weighted_dice_classification_loss'].containing_oneof = _CLASSIFICATIONLOSS.oneofs_by_name['classification_loss']
+_CLASSIFICATIONLOSS.oneofs_by_name['classification_loss'].fields.append(
+  _CLASSIFICATIONLOSS.fields_by_name['weighted_softmax_focal'])
+_CLASSIFICATIONLOSS.fields_by_name['weighted_softmax_focal'].containing_oneof = _CLASSIFICATIONLOSS.oneofs_by_name['classification_loss']
 _HARDEXAMPLEMINER.fields_by_name['loss_type'].enum_type = _HARDEXAMPLEMINER_LOSSTYPE
 _HARDEXAMPLEMINER_LOSSTYPE.containing_type = _HARDEXAMPLEMINER
 DESCRIPTOR.message_types_by_name['Loss'] = _LOSS
@@ -912,6 +961,7 @@ DESCRIPTOR.message_types_by_name['WeightedGIOULocalizationLoss'] = _WEIGHTEDGIOU
 DESCRIPTOR.message_types_by_name['ClassificationLoss'] = _CLASSIFICATIONLOSS
 DESCRIPTOR.message_types_by_name['WeightedSigmoidClassificationLoss'] = _WEIGHTEDSIGMOIDCLASSIFICATIONLOSS
 DESCRIPTOR.message_types_by_name['SigmoidFocalClassificationLoss'] = _SIGMOIDFOCALCLASSIFICATIONLOSS
+DESCRIPTOR.message_types_by_name['SoftmaxFocalClassificationLoss'] = _SOFTMAXFOCALCLASSIFICATIONLOSS
 DESCRIPTOR.message_types_by_name['WeightedSoftmaxClassificationLoss'] = _WEIGHTEDSOFTMAXCLASSIFICATIONLOSS
 DESCRIPTOR.message_types_by_name['WeightedSoftmaxClassificationAgainstLogitsLoss'] = _WEIGHTEDSOFTMAXCLASSIFICATIONAGAINSTLOGITSLOSS
 DESCRIPTOR.message_types_by_name['BootstrappedSigmoidClassificationLoss'] = _BOOTSTRAPPEDSIGMOIDCLASSIFICATIONLOSS
@@ -998,6 +1048,13 @@ SigmoidFocalClassificationLoss = _reflection.GeneratedProtocolMessageType('Sigmo
   # @@protoc_insertion_point(class_scope:object_detection.protos.SigmoidFocalClassificationLoss)
   ))
 _sym_db.RegisterMessage(SigmoidFocalClassificationLoss)
+
+SoftmaxFocalClassificationLoss = _reflection.GeneratedProtocolMessageType('SoftmaxFocalClassificationLoss', (_message.Message,), dict(
+  DESCRIPTOR = _SOFTMAXFOCALCLASSIFICATIONLOSS,
+  __module__ = 'object_detection.protos.losses_pb2'
+  # @@protoc_insertion_point(class_scope:object_detection.protos.SoftmaxFocalClassificationLoss)
+  ))
+_sym_db.RegisterMessage(SoftmaxFocalClassificationLoss)
 
 WeightedSoftmaxClassificationLoss = _reflection.GeneratedProtocolMessageType('WeightedSoftmaxClassificationLoss', (_message.Message,), dict(
   DESCRIPTOR = _WEIGHTEDSOFTMAXCLASSIFICATIONLOSS,

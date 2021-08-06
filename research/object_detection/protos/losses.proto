@@ -116,6 +116,7 @@ message ClassificationLoss {
     SigmoidFocalClassificationLoss weighted_sigmoid_focal = 4;
     PenaltyReducedLogisticFocalLoss penalty_reduced_logistic_focal_loss = 6;
     WeightedDiceClassificationLoss weighted_dice_classification_loss = 7;
+    SoftmaxFocalClassificationLoss weighted_softmax_focal = 8;
   }
 }
 
@@ -131,6 +132,13 @@ message WeightedSigmoidClassificationLoss {
 message SigmoidFocalClassificationLoss {
   // DEPRECATED, do not use.
   optional bool anchorwise_output = 1 [default = false];
+  // modulating factor for the loss.
+  optional float gamma = 2 [default = 2.0];
+  // alpha weighting factor for the loss.
+  optional float alpha = 3;
+}
+
+message SoftmaxFocalClassificationLoss {
   // modulating factor for the loss.
   optional float gamma = 2 [default = 2.0];
   // alpha weighting factor for the loss.
