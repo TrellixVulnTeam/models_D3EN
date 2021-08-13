@@ -998,9 +998,19 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
   def _extract_box_classifier_features(self, flattened_feature_maps, **side_inputs):
     if self._feature_extractor_for_box_classifier_features == (
         _UNINITIALIZED_FEATURE_EXTRACTOR):
-      self._feature_extractor_for_box_classifier_features = (
-          self._feature_extractor.get_box_classifier_feature_extractor_model(
-              name=self.second_stage_feature_extractor_scope))
+      if self.add_weight_information == True:
+        if self.weight_method == 'concat':
+          self._feature_extractor_for_box_classifier_features = (
+            self._feature_extractor.get_box_classifier_feature_extractor_model(dense_extractor=True,
+                                                                               name=self.second_stage_feature_extractor_scope))
+        else:
+          self._feature_extractor_for_box_classifier_features = (
+            self._feature_extractor.get_box_classifier_feature_extractor_model(dense_extractor=False,
+                                                                               name=self.second_stage_feature_extractor_scope))
+      else:
+        self._feature_extractor_for_box_classifier_features = (
+          self._feature_extractor.get_box_classifier_feature_extractor_model(dense_extractor=False,
+                                                                             name=self.second_stage_feature_extractor_scope))
 
     if self._feature_extractor_for_box_classifier_features:
       box_classifier_features = (
@@ -1014,17 +1024,17 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     return box_classifier_features
 
   def _create_flattened_features_for_box_classifier_extractor(self, feature_maps, **side_inputs):
-    flattened_feature_maps = tf.reshape(feature_maps, [feature_maps.shape[0], -1])
 
     if self.add_weight_information:
       weight_in_grams = side_inputs['weightInGrams']
       weight_in_grams_repeated = tf.expand_dims(tf.repeat(weight_in_grams, repeats=self.max_num_proposals), axis=1)
       if self.weight_method == 'concat':
-        flattened_feature_maps = tf.concat([flattened_feature_maps, weight_in_grams_repeated], axis=1)
-      elif self.weight_method == 'multiply':
-        flattened_feature_maps = tf.multiply(flattened_feature_maps, weight_in_grams_repeated)
+        feature_maps = tf.reshape(feature_maps, [feature_maps.shape[0], -1])
+        feature_maps = tf.concat([flattened_feature_maps, weight_in_grams_repeated], axis=1)
+      elif self.weight_method == 'predictor-multiply':
+        feature_maps = tf.multiply(feature_maps, weight_in_grams)
 
-    return flattened_feature_maps
+    return feature_maps
 
 
   def _predict_third_stage(self, prediction_dict, image_shapes):
@@ -1987,9 +1997,10 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
             class_predictions_with_background_batch))
 
     ## Multiply class_predictions_with_background_batch_normalized with proposal_scores
-    proposal_scores = tf.expand_dims(proposal_scores, -1)
-    class_predictions_with_background_batch_normalized = \
-        tf.sqrt(tf.multiply(class_predictions_with_background_batch_normalized, proposal_scores))
+    if self._is_training == False:
+      proposal_scores = tf.expand_dims(proposal_scores, -1)
+      class_predictions_with_background_batch_normalized = \
+          tf.sqrt(tf.multiply(class_predictions_with_background_batch_normalized, proposal_scores))
 
     class_predictions_batch = tf.reshape(
         tf.slice(class_predictions_with_background_batch_normalized,

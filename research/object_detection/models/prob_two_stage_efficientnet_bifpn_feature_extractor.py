@@ -15,7 +15,7 @@
 
 """Faster RCNN Keras-based Resnet V1 FPN Feature Extractor."""
 
-import tensorflow.compat.v2 as tf
+import tensorflow as tf
 
 from absl import logging
 from six.moves import range
@@ -177,7 +177,7 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
                                                               pad_to_multiple=self._pad_to_multiple,
                                                               output_layer_alias=self._output_layer_alias)
 
-    self.box_classifier_model = tf.keras.models.Sequential([
+    self.box_classifier_model_dense = tf.keras.models.Sequential([
       tf.keras.layers.Dense(units=1024, activation='relu'),
       self._conv_hyperparams.build_batch_norm(
         training=(self._is_training and not self._freeze_batchnorm)),
@@ -185,16 +185,20 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
       tf.keras.layers.Reshape((1, 1, 1024))
     ])
 
-  def preprocess(self, resized_inputs):
-    """Faster R-CNN Resnet V1 preprocessing.
+    self.box_classifier_model_conv = tf.keras.models.Sequential([
+      tf.keras.layers.SeparableConv2D(filters=1024,
+                                      kernel_size=[3, 3],
+                                      strides=2),
+      tf.keras.layers.SeparableConv2D(filters=1024,
+                                      kernel_size=[3, 3],
+                                      strides=1)
+    ])
 
-    VGG style channel mean subtraction as described here:
-    https://gist.github.com/ksimonyan/211839e770f7b538e2d8#file-readme-md
-    Note that if the number of channels is not equal to 3, the mean subtraction
-    will be skipped and the original resized_inputs will be returned.
+  def preprocess(self, inputs):
+    """SSD-Style preprocessing
 
     Args:
-      resized_inputs: A [batch, height_in, width_in, channels] float32 tensor
+      inputs: A [batch, height_in, width_in, channels] float32 tensor
         representing a batch of images with values between 0 and 255.0.
 
     Returns:
@@ -202,11 +206,13 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
         tensor representing a batch of images.
 
     """
-    if resized_inputs.shape.as_list()[3] == 3:
-      channel_means = [123.68, 116.779, 103.939]
-      return resized_inputs - [[channel_means]]
+    if inputs.shape.as_list()[3] == 3:
+      # Input images are expected to be in the range [0, 255].
+      channel_offset = [0.485, 0.456, 0.406]
+      channel_scale = [0.229, 0.224, 0.225]
+      return ((inputs / 255.0) - [[channel_offset]]) / [[channel_scale]]
     else:
-      return resized_inputs
+      return inputs
 
   def get_proposal_feature_extractor_model(self, name=None):
     """Returns a model that extracts first stage RPN features.
@@ -229,10 +235,10 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
 
 
 
-  def get_box_classifier_feature_extractor_model(self, name=None):
+  def get_box_classifier_feature_extractor_model(self, dense_extractor=False, name=None):
     """Returns a model that extracts second stage box classifier features.
 
-    Construct two fully connected layer to extract the box classifier features.
+    Construct two fully connected layer to extract the box classifier features if dense_extractor=True.
 
     Args:
       name: A scope name to construct all variables within.
@@ -248,8 +254,10 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
         [batch_size * self.max_num_proposals, 1, 1, 1024]
         representing box classifier features for each proposal.
     """
-
-    return self.box_classifier_model
+    if dense_extractor == False:
+      return self.box_classifier_model_dense
+    else:
+      return self.box_classifier_model_conv
 
 
 class ProbabilisticTwoStageEfficientNetB0BiFPNKerasFeatureExtractor(
