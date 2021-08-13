@@ -300,6 +300,9 @@ def _build_activation_fn(activation_fn):
     return tf.nn.relu6
   if activation_fn == hyperparams_pb2.Hyperparams.SWISH:
     return tf.nn.swish
+  if activation_fn == hyperparams_pb2.Hyperparams.HSWISH:
+    def hard_swish(features):
+      return features * tf.nn.relu6(features + 3.) * (1. / 6.)
   raise ValueError('Unknown activation function: {}'.format(activation_fn))
 
 
