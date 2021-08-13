@@ -28,12 +28,14 @@ import collections
 # Set headless-friendly backend.
 import matplotlib; matplotlib.use('Agg')  # pylint: disable=multiple-statements
 import matplotlib.pyplot as plt  # pylint: disable=g-import-not-at-top
+from matplotlib import cm
 import numpy as np
 import PIL.Image as Image
 import PIL.ImageColor as ImageColor
 import PIL.ImageDraw as ImageDraw
 import PIL.ImageFont as ImageFont
 import six
+import cv2
 from six.moves import range
 from six.moves import zip
 import tensorflow.compat.v1 as tf
@@ -452,9 +454,16 @@ def draw_heatmaps_on_image_array(image, heatmaps):
     image = image.numpy()
   if not isinstance(heatmaps, np.ndarray):
     heatmaps = heatmaps.numpy()
-  image_pil = Image.fromarray(np.uint8(image)).convert('RGB')
-  draw_heatmaps_on_image(image_pil, heatmaps)
-  return np.array(image_pil)
+  # image_pil = Image.fromarray(np.uint8(image)).convert('RGB')
+  # draw_heatmaps_on_image(image_pil, heatmaps)
+
+  heatmap = np.sum(heatmaps, axis=2).astype('uint8')
+  cv2.normalize(src=heatmap, dst=heatmap, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
+  heatmap_cv2 = cv2.applyColorMap(heatmap, cv2.COLORMAP_VIRIDIS)
+  superimposed = cv2.addWeighted(heatmap_cv2, 0.5, image, 0.5, 0)
+  superimposed = cv2.cvtColor(superimposed, cv2.COLOR_BGR2RGB)
+
+  return np.array(superimposed)
 
 
 def draw_heatmaps_on_image_tensors(images,
