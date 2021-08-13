@@ -306,7 +306,7 @@ def eager_train_step(detection_model,
       labels, unpad_groundtruth_tensors=unpad_groundtruth_tensors)
 
   with tf.GradientTape() as tape:
-    losses_dict, _, time_dict = _compute_losses_and_predictions_dicts(
+    losses_dict, prediction_dict, time_dict = _compute_losses_and_predictions_dicts(
         detection_model, features, labels, add_regularization_loss)
 
     total_loss = losses_dict['Loss/total_loss']
@@ -339,6 +339,22 @@ def eager_train_step(detection_model,
         step=global_step,
         data=features[fields.InputDataFields.image],
         max_outputs=num_visualization)
+
+  # feature_maps = prediction_dict['feature_maps']
+  # for feature_map in feature_maps:
+  #   unstacked_features = tf.unstack(feature_map, axis=-1)
+  #   height = feature_map.shape[1]
+  #   width = feature_map.shape[2]
+  #   for feature in unstacked_features:
+  #     feature = tf.expand_dims(feature, axis=-1)
+  #     tf.compat.v2.summary.image(
+  #       name="feature_map_{}px_{}px".format(height, width),
+  #       data=feature,
+  #       step=global_step,
+  #       max_outputs=1
+  #     )
+
+
   return total_loss, losses_dict
 
 
@@ -927,6 +943,7 @@ def eager_eval_loop(
 
     losses_dict, prediction_dict, _ = _compute_losses_and_predictions_dicts(
         detection_model, features, labels, add_regularization_loss)
+    features_dict = prediction_dict
     prediction_dict = detection_model.postprocess(
         prediction_dict, features[fields.InputDataFields.true_image_shape])
     eval_features = {
@@ -941,29 +958,7 @@ def eager_eval_loop(
         inputs.HASH_KEY: features[inputs.HASH_KEY],
     }
 
-    # gt_boxes = labels[fields.InputDataFields.groundtruth_boxes]
-    # print('Groundtruth Boxes:')
-    # print(gt_boxes[0].shape)
-    # print(gt_boxes[0].numpy())
-    #
-    # det_scores = tf.squeeze(prediction_dict[fields.DetectionResultFields.detection_scores])
-    # det_boxes = tf.squeeze(prediction_dict[fields.DetectionResultFields.detection_boxes])
-    #
-    # indices, scores = tf.image.non_max_suppression_with_scores(boxes=det_boxes, scores=det_scores,
-    #                                        iou_threshold=0.9, score_threshold=0.99, soft_nms_sigma=0.9,
-    #                                        max_output_size=30)
-    #
-    # det_boxes_with_nms = tf.gather(det_boxes, indices)
-    # print('Detection Boxes with NMS:')
-    # print(det_boxes_with_nms.shape)
-    # print(det_boxes_with_nms.numpy())
-    #
-    # det_scores_with_nms = tf.gather(det_scores, indices)
-    # print('Detection Scores with NMS:')
-    # print(det_scores_with_nms.shape)
-    # print(det_scores_with_nms.numpy())
-
-    return losses_dict, prediction_dict, groundtruth_dict, eval_features
+    return losses_dict, prediction_dict, groundtruth_dict, eval_features, features_dict
 
   agnostic_categories = label_map_util.create_class_agnostic_category_index()
   per_class_categories = label_map_util.create_category_index_from_labelmap(
@@ -976,7 +971,7 @@ def eager_eval_loop(
   for i, (features, labels) in enumerate(eval_dataset):
     try:
       (losses_dict, prediction_dict, groundtruth_dict,
-       eval_features) = strategy.run(
+       eval_features, features_dict) = strategy.run(
            compute_eval_dict, args=(features, labels))
     except Exception as exc:  # pylint:disable=broad-except
       logging.info('Encountered %s exception.', exc)
@@ -1029,6 +1024,41 @@ def eager_eval_loop(
               step=global_step,
               data=dp_image,
               max_outputs=eval_config.num_visualizations)
+
+    if i == 0:
+      ##Draw Heatmaps of Features on Image
+      feature_maps = features_dict['feature_maps']
+      image = eval_dict[fields.InputDataFields.original_image]
+      heatmap_list = []
+      for feature_map in feature_maps:
+        heatmap = vutils.draw_heatmaps_on_image_tensors(image, feature_map, apply_sigmoid=True)
+        heatmap = tf.squeeze(heatmap, axis=0)
+        heatmap_list.append(heatmap)
+
+      heatmaps_stacked = tf.stack(heatmap_list, axis=0)
+      tf.compat.v2.summary.image(
+        name="heatmaps",
+        data=heatmaps_stacked,
+        step=global_step,
+        max_outputs=heatmaps_stacked.shape[0]
+      )
+
+      ##Draw Feature Maps
+      for feature_map in feature_maps:
+        feature_map = tf.squeeze(feature_map, axis=0)
+        unstacked_features = tf.unstack(feature_map, axis=-1)
+        height = feature_map.shape[1]
+        feature_map_list = []
+        for feature in unstacked_features:
+          feature = tf.expand_dims(feature, axis=-1)
+          feature_map_list.append(feature)
+        feature_map_stacked = tf.stack(feature_map_list, axis=0)
+        tf.compat.v2.summary.image(
+          name="feature_map_{}px".format(height),
+          data=feature_map_stacked,
+          step=global_step,
+          max_outputs=feature_map_stacked.shape[0]
+        )
 
     if evaluators is None:
       if class_agnostic:
