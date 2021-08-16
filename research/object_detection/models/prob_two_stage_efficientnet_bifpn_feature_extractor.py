@@ -239,15 +239,6 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
         representing box classifier features for each proposal.
     """
     if dense_extractor == False:
-      self.box_classifier_model_dense = tf.keras.models.Sequential([
-        tf.keras.layers.Dense(units=1024, activation='relu'),
-        self._conv_hyperparams.build_batch_norm(
-          training=(self._is_training and not self._freeze_batchnorm)),
-        tf.keras.layers.Dense(units=1024, activation='relu'),
-        tf.keras.layers.Reshape((1, 1, 1024))
-      ])
-      return self.box_classifier_model_dense
-    else:
       self.box_classifier_model_conv = tf.keras.models.Sequential([
         tf.keras.layers.SeparableConv2D(filters=1024,
                                         kernel_size=[3, 3],
@@ -257,6 +248,16 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
                                         strides=1)
       ])
       return self.box_classifier_model_conv
+    else:
+      self.box_classifier_model_dense = tf.keras.models.Sequential([
+        tf.keras.layers.Dense(units=1024, activation='relu'),
+        self._conv_hyperparams.build_batch_norm(
+          training=(self._is_training and not self._freeze_batchnorm)),
+        tf.keras.layers.Dense(units=1024, activation='relu'),
+        tf.keras.layers.Reshape((1, 1, 1024))
+      ])
+      return self.box_classifier_model_dense
+
 
 
 class ProbabilisticTwoStageEfficientNetB0BiFPNKerasFeatureExtractor(
