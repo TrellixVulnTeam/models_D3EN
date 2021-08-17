@@ -419,7 +419,8 @@ def create_target_assigner(reference, stage=None,
 
   elif reference == 'ProbabilisticTwoStage' and stage == 'proposal':
     similarity_calc = sim_calc.IouSimilarity()
-    matcher = argmax_matcher.ArgMaxMatcher(matched_threshold=0.8,
+    matcher = argmax_matcher.ArgMaxMatcher(matched_threshold=0.5,
+                                           unmatched_threshold=0.4,
                                            force_match_for_each_row=True,
                                            use_matmul_gather=use_matmul_gather)
     box_coder_instance = faster_rcnn_box_coder.FasterRcnnBoxCoder(
