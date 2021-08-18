@@ -27,6 +27,8 @@ message Ssd {
 
   optional bool add_weight_as_output = 29 [default = false];
 
+  optional bool add_weight_as_output_v2 = 30 [default = false];
+
   // Image resizer for preprocessing the input image.
   optional ImageResizer image_resizer = 2;
 

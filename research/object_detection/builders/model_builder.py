@@ -401,6 +401,7 @@ def _build_ssd_model(ssd_config, is_training, add_summaries):
   add_weight_information = ssd_config.add_weight_information
   weight_method = ssd_config.weight_method
   add_weight_as_output = ssd_config.add_weight_as_output
+  add_weight_as_output_v2 = ssd_config.add_weight_as_output_v2
 
   # Feature extractor
   feature_extractor = _build_ssd_feature_extractor(
@@ -459,6 +460,7 @@ def _build_ssd_model(ssd_config, is_training, add_summaries):
       add_weight_information=add_weight_information,
       weight_method=weight_method,
       add_weight_as_output=add_weight_as_output,
+      add_weight_as_output_v2=add_weight_as_output_v2,
       anchor_generator=anchor_generator,
       box_predictor=ssd_box_predictor,
       box_coder=box_coder,

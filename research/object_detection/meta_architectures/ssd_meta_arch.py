@@ -247,8 +247,8 @@ class SSDKerasFeatureExtractor(tf.keras.Model):
 
   # This overrides the keras.Model `call` method with the _extract_features
   # method.
-  def call(self, inputs, **kwargs):
-    return self._extract_features(inputs)
+  def call(self, inputs, predict_weights=False, **kwargs):
+    return self._extract_features(inputs, predict_weights)
 
 
 class SSDMetaArch(model.DetectionModel):
@@ -277,6 +277,7 @@ class SSDMetaArch(model.DetectionModel):
                add_weight_information,
                weight_method,
                add_weight_as_output,
+               add_weight_as_output_v2,
                add_summaries=True,
                normalize_loc_loss_by_codesize=False,
                freeze_batchnorm=False,
@@ -387,6 +388,7 @@ class SSDMetaArch(model.DetectionModel):
     self._add_weight_information = add_weight_information
     self._weight_method = weight_method
     self._add_weight_as_output = add_weight_as_output
+    self._add_weight_as_output_v2 = add_weight_as_output_v2
 
     if add_background_class and explicit_background_class:
       raise ValueError("Cannot have both 'add_background_class' and"
@@ -600,7 +602,11 @@ class SSDMetaArch(model.DetectionModel):
     if self._add_weight_information == True and self._weight_method == 'input-multiply':
       preprocessed_inputs = self._multiply_input_with_weight_feature(preprocessed_inputs, **side_inputs)
 
-    feature_maps = self._feature_extractor(preprocessed_inputs)
+    if self._add_weight_as_output_v2:
+      feature_maps_dict, weights = self._feature_extractor(preprocessed_inputs, predict_weights=True)
+      feature_maps = list(feature_maps_dict.values())
+    else:
+      feature_maps = self._feature_extractor(preprocessed_inputs)
 
     if self._add_weight_information == True and self._weight_method == 'fpn-multiply':
       feature_maps = self._multiply_fpn_features_with_weight_feature(feature_maps, **side_inputs)
@@ -627,6 +633,10 @@ class SSDMetaArch(model.DetectionModel):
             tf.tile(
                 tf.expand_dims(self._anchors.get(), 0), [image_shape[0], 1, 1])
     }
+
+    if self._add_weight_as_output_v2:
+      predictions_dict['weight_predictions_v2'] = weights
+
     for prediction_key, prediction_list in iter(predictor_results_dict.items()):
       prediction = tf.concat(prediction_list, axis=1)
       if (prediction_key == 'box_encodings' and prediction.shape.ndims == 4 and
@@ -933,6 +943,21 @@ class SSDMetaArch(model.DetectionModel):
 
         weightInGrams_loss = tf.reduce_sum(weightInGrams_losses)
 
+      if self._add_weight_as_output_v2:
+        batch_weightInGrams = None
+        if self.groundtruth_has_field(fields.InputDataFields.weightInGrams):
+          weightInGrams_list = self.groundtruth_lists(fields.InputDataFields.weightInGrams)
+          batch_weightInGrams = tf.stack(weightInGrams_list)
+          batch_weightInGrams = tf.expand_dims(batch_weightInGrams, axis=1)
+
+
+        weightsV2_losses = tf.losses.huber_loss(batch_weightInGrams,
+                                                    prediction_dict['weight_predictions_v2'],
+                                                    delta=1.0,
+                                                    loss_collection=None,
+                                                    reduction=tf.losses.Reduction.NONE)
+
+      weightsV2_loss = tf.reduce_sum(weightsV2_losses)
 
       if self._expected_loss_weights_fn:
         # Need to compute losses for assigned targets against the
@@ -1008,6 +1033,9 @@ class SSDMetaArch(model.DetectionModel):
 
       if self._add_weight_as_output:
         loss_dict['Loss/weightInGrams_loss'] = weightInGrams_loss
+
+      if self._add_weight_as_output_v2:
+        loss_dict['Loss/weightsV2_loss'] = weightsV2_loss
 
 
     return loss_dict
