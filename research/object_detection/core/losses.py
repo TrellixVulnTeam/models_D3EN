@@ -462,7 +462,7 @@ class SoftmaxFocalClassificationLoss(Loss):
     prediction_probabilities = tf.nn.softmax(prediction_tensor)
     prediction_probabilities = tf.clip_by_value(prediction_probabilities, epsilon, 1. - epsilon)
 
-    cross_entropy_loss = tf.math.multiply(target_tensor, -tf.math.log(prediction_tensor))
+    cross_entropy_loss = tf.math.multiply(target_tensor, -tf.math.log(prediction_probabilities))
 
     modulating_factor = 1.0
     if self._gamma:
