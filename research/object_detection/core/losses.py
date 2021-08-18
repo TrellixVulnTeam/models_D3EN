@@ -459,11 +459,10 @@ class SoftmaxFocalClassificationLoss(Loss):
           ops.indices_to_dense_vector(class_indices,
                                       tf.shape(prediction_tensor)[2]),
           [1, 1, -1])
-    weights = tf.reduce_mean(weights, axis=2)
     prediction_probabilities = tf.nn.softmax(prediction_tensor)
     prediction_probabilities = tf.clip_by_value(prediction_probabilities, epsilon, 1. - epsilon)
 
-    cross_entropy_loss = -target_tensor * tf.math.log(prediction_probabilities)
+    cross_entropy_loss = tf.math.multiply(target_tensor, -tf.math.log(prediction_tensor))
 
     modulating_factor = 1.0
     if self._gamma:
@@ -471,10 +470,9 @@ class SoftmaxFocalClassificationLoss(Loss):
     alpha_weight_factor = 1.0
     if self._alpha is not None:
       alpha_weight_factor = self._alpha
-    focal_cross_entropy_loss = (modulating_factor * alpha_weight_factor *
-                                cross_entropy_loss)
-    focal_cross_entropy_loss_sum = tf.reduce_sum(focal_cross_entropy_loss, axis=2)
-    return focal_cross_entropy_loss_sum * weights
+    focal_cross_entropy_loss = tf.math.multiply(alpha_weight_factor, tf.math.multiply(modulating_factor, cross_entropy_loss))
+
+    return tf.math.multiply(focal_cross_entropy_loss, weights)
 
 
 class WeightedSoftmaxClassificationLoss(Loss):
