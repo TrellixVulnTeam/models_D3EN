@@ -1029,19 +1029,16 @@ def eager_eval_loop(
       ##Draw Heatmaps of Features on Image
       feature_maps = features_dict['feature_maps']
       image = eval_dict[fields.InputDataFields.original_image]
-      heatmap_list = []
+
       for feature_map in feature_maps:
         heatmap = vutils.draw_heatmaps_on_image_tensors(image, feature_map, apply_sigmoid=True)
-        heatmap = tf.squeeze(heatmap, axis=0)
-        heatmap_list.append(heatmap)
-
-      heatmaps_stacked = tf.stack(heatmap_list, axis=0)
-      tf.compat.v2.summary.image(
-        name="heatmaps",
-        data=heatmaps_stacked,
-        step=global_step,
-        max_outputs=heatmaps_stacked.shape[0]
-      )
+        feature_shape = feature_map.shape[1]
+        tf.compat.v2.summary.image(
+          name="heatmaps_{}px".format(feature_shape),
+          data=heatmap,
+          step=global_step,
+          max_outputs=heatmap.shape[0]
+        )
 
       ##Draw Feature Maps
       for feature_map in feature_maps:
