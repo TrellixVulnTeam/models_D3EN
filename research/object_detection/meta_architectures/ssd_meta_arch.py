@@ -957,7 +957,7 @@ class SSDMetaArch(model.DetectionModel):
                                                     loss_collection=None,
                                                     reduction=tf.losses.Reduction.NONE)
 
-      weightsV2_loss = tf.reduce_sum(weightsV2_losses)
+        weightsV2_loss = tf.reduce_sum(weightsV2_losses)
 
       if self._expected_loss_weights_fn:
         # Need to compute losses for assigned targets against the
