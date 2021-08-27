@@ -735,7 +735,7 @@ def train_loop(
             manager.save()
             checkpointed_step = int(global_step.value())
         # tf.compat.v2.summary.trace_export('graph', step=0)
-        manager.save()
+        # manager.save()
 
   # Remove the checkpoint directories of the non-chief workers that
   # MultiWorkerMirroredStrategy forces us to save during sync distributed
