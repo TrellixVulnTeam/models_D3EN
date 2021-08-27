@@ -935,8 +935,10 @@ class SSDMetaArch(model.DetectionModel):
           weightInGrams_list = self.groundtruth_lists(fields.InputDataFields.weightInGrams)
           batch_weightInGrams = tf.stack(weightInGrams_list)
 
+        prediction_sigmoid = tf.sigmoid(prediction_dict['weight_predictions'])
+
         weightInGrams_losses = tf.losses.huber_loss(batch_weightInGrams,
-                                                    prediction_dict['weight_predictions'],
+                                                    prediction_sigmoid,
                                                     delta=1.0,
                                                     loss_collection=None,
                                                     reduction=tf.losses.Reduction.NONE)
@@ -950,9 +952,11 @@ class SSDMetaArch(model.DetectionModel):
           batch_weightInGrams = tf.stack(weightInGrams_list)
           batch_weightInGrams = tf.expand_dims(batch_weightInGrams, axis=1)
 
+        prediction_sigmoid = tf.sigmoid(prediction_dict['weight_predictions_v2'])
+
 
         weightsV2_losses = tf.losses.huber_loss(batch_weightInGrams,
-                                                    prediction_dict['weight_predictions_v2'],
+                                                    prediction_sigmoid,
                                                     delta=1.0,
                                                     loss_collection=None,
                                                     reduction=tf.losses.Reduction.NONE)
