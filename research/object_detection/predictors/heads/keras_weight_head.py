@@ -4,6 +4,7 @@ import tensorflow as tf
 class WeightSharedConvolutionalWeightHead(head.KerasHead):
 
 	def __init__(self,
+	             num_predictions_per_location,
 	             conv_hyperparams,
 	             kernel_size=3,
 	             use_dropout=False,
@@ -12,6 +13,7 @@ class WeightSharedConvolutionalWeightHead(head.KerasHead):
 	             apply_conv_hyperparams_to_heads=False,
 	             name=None):
 		super(WeightSharedConvolutionalWeightHead, self).__init__(name=name)
+		self._num_predictions_per_location = num_predictions_per_location
 		self._kernel_size = kernel_size
 		self._use_dropout = use_dropout
 		self._dropout_keep_prob = dropout_keep_prob
@@ -33,7 +35,7 @@ class WeightSharedConvolutionalWeightHead(head.KerasHead):
 				kwargs['pointwise_initializer'] = kwargs['kernel_initializer']
 			self._weight_predictor_layers.append(
 				tf.keras.layers.SeparableConv2D(
-					filters=1,
+					filters=self._num_predictions_per_location,
 					kernel_size=[self._kernel_size, self._kernel_size],
 					padding='SAME',
 					name='WeightPredictor',
@@ -43,16 +45,13 @@ class WeightSharedConvolutionalWeightHead(head.KerasHead):
 		else:
 			self._weight_predictor_layers.append(
 				tf.keras.layers.Conv2D(
-					filters=1,
+					filters=self._num_predictions_per_location,
 					kernel_size=[self._kernel_size, self._kernel_size],
 					padding='SAME',
 					name='WeightPredictor',
 					**conv_hyperparams.params(use_bias=True)
 				)
 			)
-		self._weight_predictor_layers.append(
-			tf.keras.layers.GlobalAveragePooling2D()
-		)
 
 	def _predict(self, features):
 		"""Predicts weight.
@@ -62,8 +61,8 @@ class WeightSharedConvolutionalWeightHead(head.KerasHead):
 		        containing image features.
 
 		    Returns:
-		      weight_prediction: A float tensor of shape [batch_size, 1] representing
-		      the weight of the fruits in each image.
+		      weight_prediction: A float tensor of shape [batch_size, num_anchors, 1] representing
+		      the weight of a fruit in a anchor.
 		    """
 		weight_predictions = features
 		for layer in self._weight_predictor_layers:
@@ -72,5 +71,5 @@ class WeightSharedConvolutionalWeightHead(head.KerasHead):
 		if batch_size is None:
 			batch_size = tf.shape(features)[0]
 
-		weight_predictions = tf.reshape(weight_predictions, [batch_size, 1])
+		weight_predictions = tf.reshape(weight_predictions, [batch_size, -1, 1])
 		return weight_predictions

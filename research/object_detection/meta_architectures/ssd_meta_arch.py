@@ -643,7 +643,7 @@ class SSDMetaArch(model.DetectionModel):
           prediction.shape[2] == 1):
         prediction = tf.squeeze(prediction, axis=2)
       if prediction_key == 'weight_predictions':
-        prediction = tf.reduce_mean(prediction, axis=1)
+        prediction = tf.squeeze(prediction, axis=2)
       predictions_dict[prediction_key] = prediction
     if self._return_raw_detections_during_predict:
       predictions_dict.update(self._raw_detections_and_feature_map_inds(
@@ -777,6 +777,10 @@ class SSDMetaArch(model.DetectionModel):
         detection_scores = tf.slice(detection_scores, [0, 0, 1], [-1, -1, -1])
       additional_fields = None
 
+      ## detection_weightPerObject
+      if 'weight_predictions' in prediction_dict:
+        detection_weightPerObject = tf.identity(prediction_dict['weight_predictions'])
+
       batch_size = (
           shape_utils.combined_static_and_dynamic_shape(preprocessed_images)[0])
 
@@ -803,6 +807,9 @@ class SSDMetaArch(model.DetectionModel):
         detection_keypoints = tf.identity(
             detection_keypoints, 'raw_keypoint_locations')
         additional_fields[fields.BoxListFields.keypoints] = detection_keypoints
+
+      if detection_weightPerObject is not None:
+        additional_fields['detection_weightPerObject'] = detection_weightPerObject
 
       (nmsed_boxes, nmsed_scores, nmsed_classes, nmsed_masks,
        nmsed_additional_fields,
@@ -844,6 +851,11 @@ class SSDMetaArch(model.DetectionModel):
           fields.BoxListFields.keypoints in nmsed_additional_fields):
         detection_dict[fields.DetectionResultFields.detection_keypoints] = (
             nmsed_additional_fields[fields.BoxListFields.keypoints])
+      if (nmsed_additional_fields is not None and
+          'detection_weightPerObject' in nmsed_additional_fields):
+        detection_dict[fields.DetectionResultFields.detection_weightPerObject] = \
+          nmsed_additional_fields['detection_weightPerObject']
+
       if nmsed_masks is not None:
         detection_dict[
             fields.DetectionResultFields.detection_masks] = nmsed_masks
@@ -930,20 +942,19 @@ class SSDMetaArch(model.DetectionModel):
           losses_mask=losses_mask)
 
       if self._add_weight_as_output:
-        batch_weightScaled = None
-        if self.groundtruth_has_field(fields.InputDataFields.weightScaled):
-          weightScaled_list = self.groundtruth_lists(fields.InputDataFields.weightScaled)
-          batch_weightScaled = tf.stack(weightScaled_list)
+        batch_weightPerObject = None
+        if self.groundtruth_has_field(fields.InputDataFields.weightPerObject):
+          weightPerObject_list = self.groundtruth_lists(fields.InputDataFields.weightPerObject)
+          batch_weightPerObject = tf.stack(weightPerObject_list)
 
-        prediction_sigmoid = tf.sigmoid(prediction_dict['weight_predictions'])
+        weightPerObject_losses = tf.losses.huber_loss(batch_weightPerObject,
+                                                   prediction_dict['weight_predictions'],
+                                                   delta=1.0,
+                                                   weights=tf.expand_dims(batch_reg_weights, axis=2),
+                                                   loss_collection=None,
+                                                   reduction=tf.losses.Reduction.NONE)
 
-        weightScaled_losses = tf.losses.huber_loss(batch_weightScaled,
-                                                    prediction_sigmoid,
-                                                    delta=1.0,
-                                                    loss_collection=None,
-                                                    reduction=tf.losses.Reduction.NONE)
-
-        weightScaled_loss = tf.reduce_sum(weightScaled_losses)
+        weightPerObject_loss = tf.reduce_sum(weightPerObject_losses)
 
       if self._add_weight_as_output_v2:
         batch_weightScaled = None
@@ -1036,7 +1047,7 @@ class SSDMetaArch(model.DetectionModel):
       }
 
       if self._add_weight_as_output:
-        loss_dict['Loss/weightScaled_loss'] = weightScaled_loss
+        loss_dict['Loss/weightPerObject_loss'] = tf.multiply((1.0 / normalizer), weightPerObject_loss)
 
       if self._add_weight_as_output_v2:
         loss_dict['Loss/weightsV2_loss'] = weightsV2_loss

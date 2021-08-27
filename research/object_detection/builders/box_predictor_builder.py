@@ -422,6 +422,7 @@ def build_weight_shared_convolutional_keras_box_predictor(
   other_heads = {}
   if add_weight_as_output:
     other_heads['weight_predictions'] = keras_weight_head.WeightSharedConvolutionalWeightHead(
+      num_predictions_per_location=num_predictions_per_location,
       conv_hyperparams=conv_hyperparams,
       kernel_size=kernel_size,
       use_dropout=use_dropout,
