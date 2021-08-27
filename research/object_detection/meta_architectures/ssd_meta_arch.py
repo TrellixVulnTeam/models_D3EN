@@ -945,12 +945,13 @@ class SSDMetaArch(model.DetectionModel):
         batch_weightPerObject = None
         if self.groundtruth_has_field(fields.InputDataFields.weightPerObject):
           weightPerObject_list = self.groundtruth_lists(fields.InputDataFields.weightPerObject)
-          batch_weightPerObject = tf.stack(weightPerObject_list)
+          batch_weightPerObject = tf.expand_dims(tf.stack(weightPerObject_list), 1)
+          batch_weightPerObject = tf.repeat(batch_weightPerObject, repeats=batch_reg_weights.shape[1], axis=1)
 
         weightPerObject_losses = tf.losses.huber_loss(batch_weightPerObject,
                                                    prediction_dict['weight_predictions'],
                                                    delta=1.0,
-                                                   weights=tf.expand_dims(batch_reg_weights, axis=2),
+                                                   weights=batch_reg_weights,
                                                    loss_collection=None,
                                                    reduction=tf.losses.Reduction.NONE)
 

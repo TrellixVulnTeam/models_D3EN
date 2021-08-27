@@ -112,6 +112,7 @@ def visualize_detection_results(result_dict,
                                 max_num_predictions=20,
                                 skip_scores=False,
                                 skip_labels=False,
+                                skip_weights=True,
                                 keep_image_id_for_visualization_export=False):
   """Visualizes detection results and writes visualizations to image summaries.
 
@@ -188,6 +189,7 @@ def visualize_detection_results(result_dict,
   detection_keypoints = result_dict.get(detection_fields.detection_keypoints)
   detection_masks = result_dict.get(detection_fields.detection_masks)
   detection_boundaries = result_dict.get(detection_fields.detection_boundaries)
+  detection_weights = result_dict[detection_fields.detection_weightPerObject]
 
   # Plot groundtruth underneath detections
   if show_groundtruth:
@@ -208,6 +210,7 @@ def visualize_detection_results(result_dict,
       detection_boxes,
       detection_classes,
       detection_scores,
+      detection_weights,
       category_index,
       instance_masks=detection_masks,
       instance_boundaries=detection_boundaries,
@@ -217,7 +220,8 @@ def visualize_detection_results(result_dict,
       min_score_thresh=min_score_thresh,
       agnostic_mode=agnostic_mode,
       skip_scores=skip_scores,
-      skip_labels=skip_labels)
+      skip_labels=skip_labels,
+      skip_weights=skip_weights)
 
   if export_dir:
     if keep_image_id_for_visualization_export and result_dict[fields.
@@ -940,6 +944,9 @@ def result_dict_for_batched_example(images,
   output_dict[detection_fields.detection_classes] = detection_classes
   output_dict[detection_fields.detection_scores] = detection_scores
   output_dict[detection_fields.num_detections] = num_detections
+
+  if detection_fields.detection_weightPerObject in detections:
+    output_dict[detection_fields.detection_weightPerObject] = detections[detection_fields.detection_weightPerObject]
 
   if detection_fields.detection_masks in detections:
     detection_masks = detections[detection_fields.detection_masks]

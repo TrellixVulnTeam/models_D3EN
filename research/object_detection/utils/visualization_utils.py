@@ -310,6 +310,7 @@ def create_visualization_fn(category_index,
                             include_keypoints=False,
                             include_keypoint_scores=False,
                             include_track_ids=False,
+                            include_weights=False,
                             **kwargs):
   """Constructs a visualization function that can be wrapped in a py_func.
 
@@ -382,7 +383,7 @@ def create_visualization_fn(category_index,
     boxes = args[1]
     classes = args[2]
     scores = args[3]
-    masks = keypoints = keypoint_scores = track_ids = None
+    masks = keypoints = keypoint_scores = track_ids = weights = None
     pos_arg_ptr = 4  # Positional argument for first optional tensor (masks).
     if include_masks:
       masks = args[pos_arg_ptr]
@@ -395,12 +396,16 @@ def create_visualization_fn(category_index,
       pos_arg_ptr += 1
     if include_track_ids:
       track_ids = args[pos_arg_ptr]
+      pos_arg_ptr += 1
+    if include_weights:
+      weights = args[pos_arg_ptr]
 
     return visualize_boxes_and_labels_on_image_array(
         image,
         boxes,
         classes,
         scores,
+        weights=weights,
         category_index=category_index,
         instance_masks=masks,
         keypoints=keypoints,
@@ -533,6 +538,7 @@ def draw_bounding_boxes_on_image_tensors(images,
                                          keypoint_scores=None,
                                          keypoint_edges=None,
                                          track_ids=None,
+                                         weights=None,
                                          max_boxes_to_draw=20,
                                          min_score_thresh=0.2,
                                          use_normalized_coordinates=True):
@@ -601,6 +607,7 @@ def draw_bounding_boxes_on_image_tensors(images,
       include_keypoints=keypoints is not None,
       include_keypoint_scores=keypoint_scores is not None,
       include_track_ids=track_ids is not None,
+      include_weights=weights is not None,
       **visualization_keyword_args)
 
   elems = [true_shapes, original_shapes, images, boxes, classes, scores]
@@ -612,6 +619,8 @@ def draw_bounding_boxes_on_image_tensors(images,
     elems.append(keypoint_scores)
   if track_ids is not None:
     elems.append(track_ids)
+  if weights is not None:
+    elems.append(weights)
 
   def draw_boxes(image_and_detections):
     """Draws boxes on image."""
@@ -686,6 +695,11 @@ def draw_side_by_side_evaluation_image(eval_dict,
           tf.uint8)
     keypoints = None
     keypoint_scores = None
+
+    if detection_fields.detection_weightPerObject in eval_dict:
+      weightPerObject = tf.expand_dims(
+        eval_dict[detection_fields.detection_weightPerObject][indx], axis=0)
+
     if detection_fields.detection_keypoints in eval_dict:
       keypoints = tf.expand_dims(
           eval_dict[detection_fields.detection_keypoints][indx], axis=0)
@@ -734,6 +748,7 @@ def draw_side_by_side_evaluation_image(eval_dict,
         true_image_shape=tf.expand_dims(
             eval_dict[input_data_fields.true_image_shape][indx], axis=0),
         instance_masks=instance_masks,
+        weights=weightPerObject,
         keypoints=keypoints,
         keypoint_scores=keypoint_scores,
         keypoint_edges=keypoint_edges,
@@ -1115,6 +1130,7 @@ def visualize_boxes_and_labels_on_image_array(
     category_index,
     instance_masks=None,
     instance_boundaries=None,
+    weights=None,
     keypoints=None,
     keypoint_scores=None,
     keypoint_edges=None,
@@ -1129,7 +1145,8 @@ def visualize_boxes_and_labels_on_image_array(
     skip_boxes=False,
     skip_scores=False,
     skip_labels=False,
-    skip_track_ids=False):
+    skip_track_ids=False,
+    skip_weights=False):
   """Overlay labeled boxes on an image with formatted scores and label names.
 
   This function groups boxes that correspond to the same location
@@ -1228,6 +1245,11 @@ def visualize_boxes_and_labels_on_image_array(
             display_str = 'ID {}'.format(track_ids[i])
           else:
             display_str = '{}: ID {}'.format(display_str, track_ids[i])
+        if not skip_weights and weights is not None:
+          if not display_str:
+            display_str = '{:.3f} kg'.format(weights[i])
+          else:
+            display_str = '{} | {:.3f} kg'.format(display_str, weights[i])
         box_to_display_str_map[box].append(display_str)
         if agnostic_mode:
           box_to_color_map[box] = 'DarkOrange'
