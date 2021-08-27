@@ -504,7 +504,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
       An empty dictionary by default.
     """
 
-    return {'weightInGrams': features[fields.InputDataFields.weightInGrams]}
+    return {'weightScaled': features[fields.InputDataFields.weightScaled]}
 
   def preprocess(self, inputs):
     """Feature-extractor specific preprocessing.
@@ -1026,7 +1026,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
   def _create_flattened_features_for_box_classifier_extractor(self, feature_maps, **side_inputs):
 
     if self.add_weight_information:
-      weight_in_grams = side_inputs['weightInGrams']
+      weight_in_grams = side_inputs['weightScaled']
       weight_in_grams_repeated = tf.expand_dims(tf.repeat(weight_in_grams, repeats=self.max_num_proposals), axis=1)
       if self.weight_method == 'concat':
         feature_maps = tf.reshape(feature_maps, [feature_maps.shape[0], -1])
@@ -1215,13 +1215,13 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
             anchors, image_shape)
 
   def _multiply_input_with_weight_feature(self, preprocessed_inputs, **side_inputs):
-    weight_features = side_inputs['weightInGrams']
+    weight_features = side_inputs['weightScaled']
     preprocessed_inputs_with_weights = tf.multiply(preprocessed_inputs,
                                                    tf.reshape(weight_features, [preprocessed_inputs.shape[0], 1, 1, 1]))
     return preprocessed_inputs_with_weights
 
   def _multiply_rpn_features_with_weight_feature(self, rpn_features, **side_inputs):
-    weight_features = side_inputs['weightInGrams']
+    weight_features = side_inputs['weightScaled']
     rpn_features_with_weights_multiplied = []
     for feature in rpn_features:
       feature_multiplied = tf.multiply(feature, tf.reshape(weight_features, [feature.shape[0], 1, 1, 1]))

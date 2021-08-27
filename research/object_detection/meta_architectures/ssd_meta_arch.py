@@ -483,7 +483,7 @@ class SSDMetaArch(model.DetectionModel):
 			An empty dictionary by default.
 		"""
 
-    return {'weightInGrams': features[fields.InputDataFields.weightInGrams]}
+    return {'weightScaled': features[fields.InputDataFields.weightScaled]}
 
   def preprocess(self, inputs):
     """Feature-extractor specific preprocessing.
@@ -653,12 +653,12 @@ class SSDMetaArch(model.DetectionModel):
     return predictions_dict
 
   def _multiply_input_with_weight_feature(self, inputs, **side_inputs):
-    weight_features = side_inputs['weightInGrams']
+    weight_features = side_inputs['weightScaled']
     inputs_with_weights = tf.multiply(inputs, tf.reshape(weight_features, [inputs.shape[0], 1, 1, 1]))
     return inputs_with_weights
 
   def _multiply_fpn_features_with_weight_feature(self, feature_maps, **side_inputs):
-    weight_features = side_inputs['weightInGrams']
+    weight_features = side_inputs['weightScaled']
     fpn_features_with_weight_multiplied = []
     for feature in feature_maps:
       feature_multiplied = tf.multiply(feature, tf.reshape(weight_features, [feature.shape[0], 1, 1, 1]))
@@ -930,32 +930,32 @@ class SSDMetaArch(model.DetectionModel):
           losses_mask=losses_mask)
 
       if self._add_weight_as_output:
-        batch_weightInGrams = None
-        if self.groundtruth_has_field(fields.InputDataFields.weightInGrams):
-          weightInGrams_list = self.groundtruth_lists(fields.InputDataFields.weightInGrams)
-          batch_weightInGrams = tf.stack(weightInGrams_list)
+        batch_weightScaled = None
+        if self.groundtruth_has_field(fields.InputDataFields.weightScaled):
+          weightScaled_list = self.groundtruth_lists(fields.InputDataFields.weightScaled)
+          batch_weightScaled = tf.stack(weightScaled_list)
 
         prediction_sigmoid = tf.sigmoid(prediction_dict['weight_predictions'])
 
-        weightInGrams_losses = tf.losses.huber_loss(batch_weightInGrams,
+        weightScaled_losses = tf.losses.huber_loss(batch_weightScaled,
                                                     prediction_sigmoid,
                                                     delta=1.0,
                                                     loss_collection=None,
                                                     reduction=tf.losses.Reduction.NONE)
 
-        weightInGrams_loss = tf.reduce_sum(weightInGrams_losses)
+        weightScaled_loss = tf.reduce_sum(weightScaled_losses)
 
       if self._add_weight_as_output_v2:
-        batch_weightInGrams = None
-        if self.groundtruth_has_field(fields.InputDataFields.weightInGrams):
-          weightInGrams_list = self.groundtruth_lists(fields.InputDataFields.weightInGrams)
-          batch_weightInGrams = tf.stack(weightInGrams_list)
-          batch_weightInGrams = tf.expand_dims(batch_weightInGrams, axis=1)
+        batch_weightScaled = None
+        if self.groundtruth_has_field(fields.InputDataFields.weightScaled):
+          weightScaled_list = self.groundtruth_lists(fields.InputDataFields.weightScaled)
+          batch_weightScaled = tf.stack(weightScaled_list)
+          batch_weightScaled = tf.expand_dims(batch_weightScaled, axis=1)
 
         prediction_sigmoid = tf.sigmoid(prediction_dict['weight_predictions_v2'])
 
 
-        weightsV2_losses = tf.losses.huber_loss(batch_weightInGrams,
+        weightsV2_losses = tf.losses.huber_loss(batch_weightScaled,
                                                     prediction_sigmoid,
                                                     delta=1.0,
                                                     loss_collection=None,
@@ -1036,7 +1036,7 @@ class SSDMetaArch(model.DetectionModel):
       }
 
       if self._add_weight_as_output:
-        loss_dict['Loss/weightInGrams_loss'] = weightInGrams_loss
+        loss_dict['Loss/weightScaled_loss'] = weightScaled_loss
 
       if self._add_weight_as_output_v2:
         loss_dict['Loss/weightsV2_loss'] = weightsV2_loss

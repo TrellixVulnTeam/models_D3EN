@@ -204,7 +204,9 @@ class TfExampleDecoder(data_decoder.DataDecoder):
             tf.FixedLenFeature((), tf.int64, default_value=1),
         'image/width':
             tf.FixedLenFeature((), tf.int64, default_value=1),
-        'image/weightInGrams':
+        'image/weightScaled':
+            tf.FixedLenFeature((), tf.float32, default_value=-1.0),
+        'image/weightPerObject':
             tf.FixedLenFeature((), tf.float32, default_value=-1.0),
         # Image-level labels.
         'image/class/text':
@@ -273,8 +275,10 @@ class TfExampleDecoder(data_decoder.DataDecoder):
             slim_example_decoder.Tensor('image/key/sha256')),
         fields.InputDataFields.filename: (
             slim_example_decoder.Tensor('image/filename')),
-        fields.InputDataFields.weightInGrams: (
-            slim_example_decoder.Tensor('image/weightInGrams')),
+        fields.InputDataFields.weightScaled: (
+            slim_example_decoder.Tensor('image/weightScaled')),
+        fields.InputDataFields.weightPerObject: (
+            slim_example_decoder.Tensor('image/weightPerObject')),
         # Image-level labels.
         fields.InputDataFields.groundtruth_image_confidences: (
             slim_example_decoder.Tensor('image/class/confidence')),

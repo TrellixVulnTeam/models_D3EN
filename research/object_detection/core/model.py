@@ -318,7 +318,8 @@ class DetectionModel(six.with_metaclass(abc.ABCMeta, _BaseClass)):
       groundtruth_not_exhaustive_classes=None,
       groundtruth_keypoint_depths_list=None,
       groundtruth_keypoint_depth_weights_list=None,
-      groundtruth_weightInGrams_list=None):
+      groundtruth_weightScaled_list=None,
+      groundtruth_weightPerObject_list=None):
     """Provide groundtruth tensors.
 
     Args:
@@ -463,8 +464,10 @@ class DetectionModel(six.with_metaclass(abc.ABCMeta, _BaseClass)):
           fields.InputDataFields
           .groundtruth_not_exhaustive_classes] = (
               groundtruth_not_exhaustive_classes)
-    if groundtruth_weightInGrams_list:
-      self._groundtruth_lists[fields.InputDataFields.weightInGrams] = groundtruth_weightInGrams_list
+    if groundtruth_weightScaled_list:
+      self._groundtruth_lists[fields.InputDataFields.weightScaled] = groundtruth_weightScaled_list
+    if groundtruth_weightPerObject_list:
+      self._groundtruth_lists[fields.InputDataFields.weightPerObject] = groundtruth_weightPerObject_list
 
   @abc.abstractmethod
   def regularization_losses(self):

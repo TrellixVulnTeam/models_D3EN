@@ -473,7 +473,8 @@ def pad_input_data_to_static_shapes(tensor_dict,
       input_fields.source_id: [],
       input_fields.filename: [],
       input_fields.key: [],
-      input_fields.weightInGrams: [],
+      input_fields.weightScaled: [],
+      input_fields.weightPerObject: [],
       input_fields.groundtruth_difficult: [max_num_boxes],
       input_fields.groundtruth_boxes: [max_num_boxes, 4],
       input_fields.groundtruth_classes: [max_num_boxes, num_classes],
@@ -665,7 +666,8 @@ def _get_labels_dict(input_dict):
       fields.InputDataFields.groundtruth_track_ids,
       fields.InputDataFields.groundtruth_verified_neg_classes,
       fields.InputDataFields.groundtruth_not_exhaustive_classes,
-      fields.InputDataFields.weightInGrams
+      fields.InputDataFields.weightScaled,
+      fields.InputDataFields.weightPerObject
   ]
 
   for key in optional_label_keys:
@@ -721,8 +723,8 @@ def _get_features_dict(input_dict, include_source_id=False):
           input_dict[fields.InputDataFields.true_image_shape],
       fields.InputDataFields.original_image_spatial_shape:
           input_dict[fields.InputDataFields.original_image_spatial_shape],
-      fields.InputDataFields.weightInGrams:
-          input_dict[fields.InputDataFields.weightInGrams]
+      fields.InputDataFields.weightScaled:
+          input_dict[fields.InputDataFields.weightScaled]
   }
   if include_source_id:
     features[fields.InputDataFields.source_id] = source_id
