@@ -778,6 +778,7 @@ class SSDMetaArch(model.DetectionModel):
       additional_fields = None
 
       ## detection_weightPerObject
+      detection_weightPerObject = None
       if 'weight_predictions' in prediction_dict:
         detection_weightPerObject = tf.identity(prediction_dict['weight_predictions'])
 
