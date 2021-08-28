@@ -696,6 +696,7 @@ def draw_side_by_side_evaluation_image(eval_dict,
     keypoints = None
     keypoint_scores = None
 
+    weightPerObject = None
     if detection_fields.detection_weightPerObject in eval_dict:
       weightPerObject = tf.expand_dims(
         eval_dict[detection_fields.detection_weightPerObject][indx], axis=0)
