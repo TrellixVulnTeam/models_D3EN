@@ -187,16 +187,6 @@ class SSDEfficientNetBiFPNKerasFeatureExtractor(
         bifpn_node_params=self._bifpn_node_params,
         name='bifpn')
 
-    self._weight_predictor = tf.keras.models.Sequential([
-      tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
-      tf.keras.layers.Flatten(),
-      tf.keras.layers.Dense(units=1024, activation='relu'),
-      tf.keras.layers.Dropout(rate=0.5),
-      tf.keras.layers.Dense(units=512, activation='relu'),
-      tf.keras.layers.Dropout(rate=0.5),
-      tf.keras.layers.Dense(units=256, activation='relu'),
-      tf.keras.layers.Dense(units=1, activation='linear')
-    ])
     self.built = True
 
   def preprocess(self, inputs):
@@ -241,6 +231,16 @@ class SSDEfficientNetBiFPNKerasFeatureExtractor(
         list(zip(self._output_layer_alias, base_feature_maps)))
 
     if predict_weights:
+      self._weight_predictor = tf.keras.models.Sequential([
+        tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Dense(units=1024, activation='relu'),
+        tf.keras.layers.Dropout(rate=0.5),
+        tf.keras.layers.Dense(units=512, activation='relu'),
+        tf.keras.layers.Dropout(rate=0.5),
+        tf.keras.layers.Dense(units=256, activation='relu'),
+        tf.keras.layers.Dense(units=1, activation='linear')
+      ])
       weights = self._weight_predictor(base_feature_maps[-1])
       return output_feature_map_dict, weights
 
