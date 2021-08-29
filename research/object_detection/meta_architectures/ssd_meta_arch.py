@@ -965,11 +965,8 @@ class SSDMetaArch(model.DetectionModel):
           batch_weightScaled = tf.stack(weightScaled_list)
           batch_weightScaled = tf.expand_dims(batch_weightScaled, axis=1)
 
-        prediction_sigmoid = tf.sigmoid(prediction_dict['weight_predictions_v2'])
-
-
         weightsV2_losses = tf.losses.huber_loss(batch_weightScaled,
-                                                    prediction_sigmoid,
+                                                    prediction_dict['weight_predictions_v2'],
                                                     delta=1.0,
                                                     loss_collection=None,
                                                     reduction=tf.losses.Reduction.NONE)

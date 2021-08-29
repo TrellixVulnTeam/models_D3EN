@@ -243,6 +243,8 @@ class SSDEfficientNetBiFPNKerasFeatureExtractor(
 
     if predict_weights:
       weights = self._weight_predictor(base_feature_maps[-1])
+      print(base_feature_maps[-1])
+      print(weights)
       return output_feature_map_dict, weights
 
     else:
