@@ -241,12 +241,12 @@ class SSDEfficientNetBiFPNKerasFeatureExtractor(
     output_feature_map_dict = self._bifpn_stage(
         list(zip(self._output_layer_alias, base_feature_maps)))
 
-    if predict_weights:
-      weights = self._weight_predictor(base_feature_maps[-1])
-      return output_feature_map_dict, weights
-
-    else:
-      return list(output_feature_map_dict.values())
+    # if predict_weights:
+    #   weights = self._weight_predictor(base_feature_maps[-1])
+    #   return output_feature_map_dict, weights
+    # else:
+    #   return list(output_feature_map_dict.values())
+    return list(output_feature_map_dict.values())
 
 
 
