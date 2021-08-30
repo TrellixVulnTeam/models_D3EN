@@ -248,7 +248,10 @@ class SSDKerasFeatureExtractor(tf.keras.Model):
   # This overrides the keras.Model `call` method with the _extract_features
   # method.
   def call(self, inputs, predict_weights=False, **kwargs):
-    return self._extract_features(inputs, predict_weights)
+    if predict_weights:
+      return self._extract_features(inputs, predict_weights)
+    else:
+      return self._extract_features(inputs)
 
 
 class SSDMetaArch(model.DetectionModel):

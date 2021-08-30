@@ -173,16 +173,16 @@ class SSDEfficientNetBiFPNKerasFeatureExtractor(
     self.classification_backbone = efficientnet_base
     self._bifpn_stage = None
 
-    self._weight_predictor = tf.keras.models.Sequential([
-      tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
-      tf.keras.layers.Flatten(),
-      tf.keras.layers.Dense(units=1024, activation='relu'),
-      tf.keras.layers.Dropout(rate=0.5),
-      tf.keras.layers.Dense(units=512, activation='relu'),
-      tf.keras.layers.Dropout(rate=0.5),
-      tf.keras.layers.Dense(units=256, activation='relu'),
-      tf.keras.layers.Dense(units=1, activation='linear')
-    ])
+    # self._weight_predictor = tf.keras.models.Sequential([
+    #   tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+    #   tf.keras.layers.Flatten(),
+    #   tf.keras.layers.Dense(units=1024, activation='relu'),
+    #   tf.keras.layers.Dropout(rate=0.5),
+    #   tf.keras.layers.Dense(units=512, activation='relu'),
+    #   tf.keras.layers.Dropout(rate=0.5),
+    #   tf.keras.layers.Dense(units=256, activation='relu'),
+    #   tf.keras.layers.Dense(units=1, activation='linear')
+    # ])
 
 
   def build(self, input_shape):
