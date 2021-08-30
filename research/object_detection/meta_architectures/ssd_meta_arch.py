@@ -247,11 +247,8 @@ class SSDKerasFeatureExtractor(tf.keras.Model):
 
   # This overrides the keras.Model `call` method with the _extract_features
   # method.
-  def call(self, inputs, predict_weights=False, **kwargs):
-    if predict_weights:
-      return self._extract_features(inputs, predict_weights)
-    else:
-      return self._extract_features(inputs)
+  def call(self, inputs, **kwargs):
+    return self._extract_features(inputs)
 
 
 class SSDMetaArch(model.DetectionModel):
@@ -449,6 +446,19 @@ class SSDMetaArch(model.DetectionModel):
     self._return_raw_detections_during_predict = (
         return_raw_detections_during_predict)
 
+    self._weight_predictor = None
+    if self._add_weight_as_output_v2:
+      self._weight_predictor = tf.keras.models.Sequential([
+        tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Dense(units=1024, activation='relu'),
+        tf.keras.layers.Dropout(rate=0.5),
+        tf.keras.layers.Dense(units=512, activation='relu'),
+        tf.keras.layers.Dropout(rate=0.5),
+        tf.keras.layers.Dense(units=256, activation='relu'),
+        tf.keras.layers.Dense(units=1, activation='linear')
+      ])
+
   @property
   def feature_extractor(self):
     return self._feature_extractor
@@ -602,16 +612,14 @@ class SSDMetaArch(model.DetectionModel):
     else:
       batchnorm_updates_collections = tf.GraphKeys.UPDATE_OPS
 
-    if self._add_weight_information == True and self._weight_method == 'input-multiply':
+    if self._add_weight_information and self._weight_method == 'input-multiply':
       preprocessed_inputs = self._multiply_input_with_weight_feature(preprocessed_inputs, **side_inputs)
 
+    feature_maps, base_feature_maps = self._feature_extractor(preprocessed_inputs)
     if self._add_weight_as_output_v2:
-      feature_maps_dict, weights = self._feature_extractor(preprocessed_inputs, predict_weights=True)
-      feature_maps = list(feature_maps_dict.values())
-    else:
-      feature_maps = self._feature_extractor(preprocessed_inputs)
+      weights = self._weight_predictor(base_feature_maps[-1])
 
-    if self._add_weight_information == True and self._weight_method == 'fpn-multiply':
+    if self._add_weight_information and self._weight_method == 'fpn-multiply':
       feature_maps = self._multiply_fpn_features_with_weight_feature(feature_maps, **side_inputs)
 
     feature_map_spatial_dims = self._get_feature_map_spatial_dims(
