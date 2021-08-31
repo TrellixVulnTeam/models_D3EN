@@ -177,6 +177,18 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
                                                               pad_to_multiple=self._pad_to_multiple,
                                                               output_layer_alias=self._output_layer_alias)
 
+    self.box_classifier_model_conv = tf.keras.models.Sequential([
+      tf.keras.layers.SeparableConv2D(filters=128,
+                                      kernel_size=[3, 3],
+                                      strides=2,
+                                      activation='relu'),
+      tf.keras.layers.Flatten(),
+      tf.keras.layers.Dense(units=1024, activation='relu'),
+      tf.keras.layers.Dense(units=512, activation='relu'),
+      tf.keras.layers.Dense(units=256, activation='relu'),
+      tf.keras.layers.Reshape((1, 1, 256))
+    ])
+
 
   def preprocess(self, inputs):
     """SSD-Style preprocessing
@@ -237,18 +249,8 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
         representing box classifier features for each proposal.
     """
 
-    box_classifier_model_conv = tf.keras.models.Sequential([
-      tf.keras.layers.SeparableConv2D(filters=128,
-                                      kernel_size=[3, 3],
-                                      strides=2,
-                                      activation='relu'),
-      tf.keras.layers.Flatten(),
-      tf.keras.layers.Dense(units=1024, activation='relu'),
-      tf.keras.layers.Dense(units=512, activation='relu'),
-      tf.keras.layers.Dense(units=256, activation='relu'),
-      tf.keras.layers.Reshape((1, 1, 256))
-    ])
-    return box_classifier_model_conv
+
+    return self.box_classifier_model_conv
 
 
 
