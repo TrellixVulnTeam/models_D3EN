@@ -29,7 +29,7 @@ message ProbabilisticTwoStage {
   // Which version of weight method to use ('concat', 'input-multiply', 'fpn-multiply', 'predictor-multiply')
   optional string weight_method = 44 [default = 'input-multiply'];
 
-  optional bool add_weight_as_outputv1 = 45 [default = false];
+  optional bool add_weight_as_output = 45 [default = false];
 
   // Number of classes to predict.
   optional int32 num_classes = 3;
