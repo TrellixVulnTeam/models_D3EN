@@ -219,10 +219,8 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
 
 
 
-  def get_box_classifier_feature_extractor_model(self, dense_extractor=False, name=None):
+  def get_box_classifier_feature_extractor_model(self, name=None):
     """Returns a model that extracts second stage box classifier features.
-
-    Construct two fully connected layer to extract the box classifier features if dense_extractor=True.
 
     Args:
       name: A scope name to construct all variables within.
@@ -235,28 +233,22 @@ class ProbabilisticTwoStageEfficientNetBiFPNKerasFeatureExtractor(
 
       And returns proposal_classifier_features:
         A 4-D float tensor with shape
-        [batch_size * self.max_num_proposals, 1, 1, 1024]
+        [batch_size * self.max_num_proposals, 1, 1, 512]
         representing box classifier features for each proposal.
     """
-    if dense_extractor == False:
-      self.box_classifier_model_conv = tf.keras.models.Sequential([
-        tf.keras.layers.SeparableConv2D(filters=1024,
-                                        kernel_size=[3, 3],
-                                        strides=2),
-        tf.keras.layers.SeparableConv2D(filters=1024,
-                                        kernel_size=[3, 3],
-                                        strides=1)
-      ])
-      return self.box_classifier_model_conv
-    else:
-      self.box_classifier_model_dense = tf.keras.models.Sequential([
-        tf.keras.layers.Dense(units=1024, activation='relu'),
-        self._conv_hyperparams.build_batch_norm(
-          training=(self._is_training and not self._freeze_batchnorm)),
-        tf.keras.layers.Dense(units=1024, activation='relu'),
-        tf.keras.layers.Reshape((1, 1, 1024))
-      ])
-      return self.box_classifier_model_dense
+
+    box_classifier_model_conv = tf.keras.models.Sequential([
+      tf.keras.layers.SeparableConv2D(filters=128,
+                                      kernel_size=[3, 3],
+                                      strides=2,
+                                      activation='relu'),
+      tf.keras.layers.Flatten(),
+      tf.keras.layers.Dense(units=1024, activation='relu'),
+      tf.keras.layers.Dense(units=512, activation='relu'),
+      tf.keras.layers.Dense(units=256, activation='relu'),
+      tf.keras.layers.Reshape((1, 1, 256))
+    ])
+    return box_classifier_model_conv
 
 
 

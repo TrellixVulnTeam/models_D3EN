@@ -928,6 +928,7 @@ def _build_prob_two_stage_model(prob_two_stage_config, is_training, add_summarie
   num_classes = prob_two_stage_config.num_classes
   add_weight_information = prob_two_stage_config.add_weight_information
   weight_method = prob_two_stage_config.weight_method
+  add_weight_as_output = prob_two_stage_config.add_weight_as_output
   image_resizer_fn = image_resizer_builder.build(prob_two_stage_config.image_resizer)
   _check_feature_extractor_exists(prob_two_stage_config.feature_extractor.type)
   is_keras = tf_version.is_tf2()
@@ -977,7 +978,8 @@ def _build_prob_two_stage_model(prob_two_stage_config, is_training, add_summarie
       max_total_size=prob_two_stage_config.first_stage_max_proposals,
       use_static_shapes=use_static_shapes,
       use_partitioned_nms=prob_two_stage_config.use_partitioned_nms_in_first_stage,
-      use_combined_nms=prob_two_stage_config.use_combined_nms_in_first_stage)
+      use_combined_nms=prob_two_stage_config.use_combined_nms_in_first_stage,
+      soft_nms_sigma=prob_two_stage_config.first_stage_soft_nms_sigma)
   first_stage_loc_loss_weight = (
       prob_two_stage_config.first_stage_localization_loss_weight)
   first_stage_obj_loss_weight = prob_two_stage_config.first_stage_objectness_loss_weight
@@ -1039,6 +1041,8 @@ def _build_prob_two_stage_model(prob_two_stage_config, is_training, add_summarie
           add_weight_information,
       'weight_method':
           weight_method,
+      'add_weight_as_output':
+          add_weight_as_output,
       'image_resizer_fn':
           image_resizer_fn,
       'feature_extractor':

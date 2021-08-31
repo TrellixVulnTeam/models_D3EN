@@ -26,8 +26,10 @@ message ProbabilisticTwoStage {
   // Wether to add Weight Information as Side Input to the model.
   optional bool add_weight_information = 2 [default = false];
 
-  // Which version of weight method to use ('concat', 'input-multiply', 'fpn-multiply', 'predictor-multiply', 'output')
+  // Which version of weight method to use ('concat', 'input-multiply', 'fpn-multiply', 'predictor-multiply')
   optional string weight_method = 44 [default = 'input-multiply'];
+
+  optional bool add_weight_as_outputv1 = 45 [default = false];
 
   // Number of classes to predict.
   optional int32 num_classes = 3;
@@ -58,6 +60,9 @@ message ProbabilisticTwoStage {
 
   // Non max suppression IOU threshold applied to first stage RPN proposals.
   optional float first_stage_nms_iou_threshold = 14 [default = 0.7];
+
+  // Sigma value for soft NMS in first stage.
+  optional float first_stage_soft_nms_sigma = 46 [default = 0.0];
 
   // Maximum number of RPN proposals retained after first stage postprocessing.
   optional int32 first_stage_max_proposals = 15 [default = 300];

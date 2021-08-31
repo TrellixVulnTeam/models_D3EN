@@ -166,6 +166,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
                num_classes,
                add_weight_information,
                weight_method,
+               add_weight_as_output,
                image_resizer_fn,
                feature_extractor,
                number_of_stages,
@@ -351,8 +352,9 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     super(ProbabilisticTwoStageMetaArch, self).__init__(num_classes=num_classes)
 
     self._is_training = is_training
-    self.add_weight_information = add_weight_information
-    self.weight_method = weight_method
+    self._add_weight_information = add_weight_information
+    self._weight_method = weight_method
+    self._add_weight_as_output = add_weight_as_output
     self._image_resizer_fn = image_resizer_fn
     self._resize_masks = resize_masks
     self._feature_extractor = feature_extractor
@@ -906,17 +908,20 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
           self.max_num_proposals, 4] containing the reference anchors for raw
           detection boxes in normalized coordinates.
     """
-    proposal_feature_maps = (
+    flattened_proposal_feature_maps = (
         self._compute_second_stage_input_feature_maps(
             rpn_features_to_crop, proposal_boxes_normalized,
             image_shape, **side_inputs))
 
-    # flatten feature maps to 2D before using model and concat weight information if existing
-    flattened_proposal_feature_maps = self._create_flattened_features_for_box_classifier_extractor(
-        proposal_feature_maps, **side_inputs)
+    if self._add_weight_information and self._weight_method == 'predictor-multiply':
+      flattened_proposal_feature_maps = self._multiply_features_with_weights_for_box_classifier_extractor(
+          flattened_proposal_feature_maps, **side_inputs)
 
     box_classifier_features = self._extract_box_classifier_features(
         flattened_proposal_feature_maps, **side_inputs)
+
+    if self._add_weight_information and self._weight_method == 'concat':
+      box_classifier_features = self._concat_weights_to_features(box_classifier_features, **side_inputs)
 
     if self._mask_rcnn_box_predictor.is_keras_model:
       box_predictions = self._mask_rcnn_box_predictor(
@@ -998,19 +1003,11 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
   def _extract_box_classifier_features(self, flattened_feature_maps, **side_inputs):
     if self._feature_extractor_for_box_classifier_features == (
         _UNINITIALIZED_FEATURE_EXTRACTOR):
-      if self.add_weight_information == True:
-        if self.weight_method == 'concat':
-          self._feature_extractor_for_box_classifier_features = (
-            self._feature_extractor.get_box_classifier_feature_extractor_model(dense_extractor=True,
-                                                                               name=self.second_stage_feature_extractor_scope))
-        else:
-          self._feature_extractor_for_box_classifier_features = (
-            self._feature_extractor.get_box_classifier_feature_extractor_model(dense_extractor=False,
-                                                                               name=self.second_stage_feature_extractor_scope))
-      else:
-        self._feature_extractor_for_box_classifier_features = (
-          self._feature_extractor.get_box_classifier_feature_extractor_model(dense_extractor=False,
-                                                                             name=self.second_stage_feature_extractor_scope))
+      self._feature_extractor_for_box_classifier_features = (
+        self._feature_extractor.get_box_classifier_feature_extractor_model(name=self.second_stage_feature_extractor_scope))
+    else:
+      self._feature_extractor_for_box_classifier_features = (
+        self._feature_extractor.get_box_classifier_feature_extractor_model(name=self.second_stage_feature_extractor_scope))
 
     if self._feature_extractor_for_box_classifier_features:
       box_classifier_features = (
@@ -1023,18 +1020,16 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     #           scope=self.second_stage_feature_extractor_scope))
     return box_classifier_features
 
-  def _create_flattened_features_for_box_classifier_extractor(self, feature_maps, **side_inputs):
-
-    if self.add_weight_information:
-      weight_in_grams = side_inputs['weightScaled']
-      weight_in_grams_repeated = tf.expand_dims(tf.repeat(weight_in_grams, repeats=self.max_num_proposals), axis=1)
-      if self.weight_method == 'concat':
-        feature_maps = tf.reshape(feature_maps, [feature_maps.shape[0], -1])
-        feature_maps = tf.concat([flattened_feature_maps, weight_in_grams_repeated], axis=1)
-      elif self.weight_method == 'predictor-multiply':
-        feature_maps = tf.multiply(feature_maps, weight_in_grams)
-
+  def _multiply_features_with_weights_for_box_classifier_extractor(self, feature_maps, **side_inputs):
+    weight_in_grams = side_inputs['weightScaled']
+    feature_maps = tf.multiply(feature_maps, weight_in_grams)
     return feature_maps
+
+  def _concat_weights_to_features(self, box_features, **side_inputs):
+    weight_in_grams = side_inputs['weightScaled']
+    weight_in_grams_repeated = tf.expand_dims(tf.repeat(weight_in_grams, repeats=self.max_num_proposals), axis=1)
+    concat_box_features = tf.concat([box_features, weight_in_grams_repeated], axis=3)
+    return concat_box_features
 
 
   def _predict_third_stage(self, prediction_dict, image_shapes):
@@ -1191,13 +1186,13 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     """
     image_shape = tf.shape(preprocessed_inputs)
 
-    if self.add_weight_information == True and self.weight_method == 'input-multiply':
+    if self._add_weight_information and self._weight_method == 'input-multiply':
       preprocessed_inputs = self._multiply_input_with_weight_feature(preprocessed_inputs, **side_inputs)
 
     rpn_features_to_crop, self.endpoints = self._extract_proposal_features(
         preprocessed_inputs)
 
-    if self.add_weight_information == True and self.weight_method == 'rpn-multiply':
+    if self._add_weight_information and self._weight_method == 'rpn-multiply':
       rpn_features_to_crop = self._multiply_rpn_features_with_weight_feature(rpn_features_to_crop, **side_inputs)
 
     # Decide if rpn_features_to_crop is a list. If not make it a list
