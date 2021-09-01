@@ -1022,6 +1022,8 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
 
   def _multiply_features_with_weights_for_box_classifier_extractor(self, feature_maps, **side_inputs):
     weight_in_grams = side_inputs['weightScaled']
+    weight_in_grams_repeated = tf.repeat(weight_in_grams, repeats=self.max_num_proposals)
+    weight_in_grams_repeated = weight_in_grams_repeated[:, tf.newaxis, tf.newaxis, tf.newaxis]
     feature_maps = tf.multiply(feature_maps, weight_in_grams)
     return feature_maps
 
