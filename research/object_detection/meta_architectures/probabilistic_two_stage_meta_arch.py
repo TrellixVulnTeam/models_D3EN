@@ -1024,7 +1024,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     weight_in_grams = side_inputs['weightScaled']
     weight_in_grams_repeated = tf.repeat(weight_in_grams, repeats=self.max_num_proposals)
     weight_in_grams_repeated = weight_in_grams_repeated[:, tf.newaxis, tf.newaxis, tf.newaxis]
-    feature_maps = tf.multiply(feature_maps, weight_in_grams)
+    feature_maps = tf.multiply(feature_maps, weight_in_grams_repeated)
     return feature_maps
 
   def _concat_weights_to_features(self, box_features, **side_inputs):
