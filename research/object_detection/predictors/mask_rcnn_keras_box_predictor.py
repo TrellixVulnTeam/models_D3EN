@@ -20,6 +20,7 @@ from object_detection.core import box_predictor
 BOX_ENCODINGS = box_predictor.BOX_ENCODINGS
 CLASS_PREDICTIONS_WITH_BACKGROUND = (
     box_predictor.CLASS_PREDICTIONS_WITH_BACKGROUND)
+WEIGHT_PREDICTIONS = box_predictor.WEIGHT_PREDICTIONS
 MASK_PREDICTIONS = box_predictor.MASK_PREDICTIONS
 
 
@@ -48,6 +49,7 @@ class MaskRCNNKerasBoxPredictor(box_predictor.KerasBoxPredictor):
                box_prediction_head,
                class_prediction_head,
                third_stage_heads,
+               weight_prediction_head=None,
                name=None):
     """Constructor.
 
@@ -63,6 +65,7 @@ class MaskRCNNKerasBoxPredictor(box_predictor.KerasBoxPredictor):
         params.
       box_prediction_head: The head that predicts the boxes in second stage.
       class_prediction_head: The head that predicts the classes in second stage.
+      weight_prediction_head: The head that predicts the weight in second stage.
       third_stage_heads: A dictionary mapping head names to mask rcnn head
         classes.
       name: A string name scope to assign to the model. If `None`, Keras
@@ -73,6 +76,7 @@ class MaskRCNNKerasBoxPredictor(box_predictor.KerasBoxPredictor):
         inplace_batchnorm_update=False, name=name)
     self._box_prediction_head = box_prediction_head
     self._class_prediction_head = class_prediction_head
+    self._weight_prediction_head = weight_prediction_head
     self._third_stage_heads = third_stage_heads
 
   @property
@@ -80,7 +84,10 @@ class MaskRCNNKerasBoxPredictor(box_predictor.KerasBoxPredictor):
     return self._num_classes
 
   def get_second_stage_prediction_heads(self):
-    return BOX_ENCODINGS, CLASS_PREDICTIONS_WITH_BACKGROUND
+    if self._weight_prediction_head is None:
+      return BOX_ENCODINGS, CLASS_PREDICTIONS_WITH_BACKGROUND
+    else:
+      return BOX_ENCODINGS, CLASS_PREDICTIONS_WITH_BACKGROUND, WEIGHT_PREDICTIONS
 
   def get_third_stage_prediction_heads(self):
     return sorted(self._third_stage_heads.keys())
@@ -114,6 +121,11 @@ class MaskRCNNKerasBoxPredictor(box_predictor.KerasBoxPredictor):
         MASK_PREDICTIONS: A float tensor of shape
           [batch_size, 1, num_classes, image_height, image_width]
 
+        optional:
+        WEIGHT_PREDICTIONS: A float tensor of shape
+          [batch_size, 1, num_classes, 1] representing the
+          weight of the objects.
+
     Raises:
       ValueError: If num_predictions_per_location is not 1 or if
         len(image_features) is not 1.
@@ -129,6 +141,8 @@ class MaskRCNNKerasBoxPredictor(box_predictor.KerasBoxPredictor):
       predictions_dict[BOX_ENCODINGS] = self._box_prediction_head(image_feature)
       predictions_dict[CLASS_PREDICTIONS_WITH_BACKGROUND] = (
           self._class_prediction_head(image_feature))
+      if self._weight_prediction_head is not None:
+        predictions_dict[WEIGHT_PREDICTIONS] = self._weight_prediction_head(image_feature)
     elif prediction_stage == 3:
       for prediction_head in self.get_third_stage_prediction_heads():
         head_object = self._third_stage_heads[prediction_head]

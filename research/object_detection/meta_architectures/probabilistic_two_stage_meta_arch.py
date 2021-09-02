@@ -944,16 +944,19 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     absolute_proposal_boxes = ops.normalized_to_image_coordinates(
         proposal_boxes_normalized, image_shape, self._parallel_iterations)
 
-    prediction_dict = {
-        'refined_box_encodings': tf.cast(refined_box_encodings,
-                                         dtype=tf.float32),
-        'class_predictions_with_background':
-        tf.cast(class_predictions_with_background, dtype=tf.float32),
-        'proposal_boxes': absolute_proposal_boxes,
-        'box_classifier_features': box_classifier_features,
-        'proposal_boxes_normalized': proposal_boxes_normalized,
-        'final_anchors': proposal_boxes_normalized
-    }
+    prediction_dict = {'refined_box_encodings': tf.cast(refined_box_encodings,
+                                                        dtype=tf.float32),
+                       'class_predictions_with_background': tf.cast(class_predictions_with_background,
+                                                                    dtype=tf.float32),
+                       'proposal_boxes': absolute_proposal_boxes,
+                       'box_classifier_features': box_classifier_features,
+                       'proposal_boxes_normalized': proposal_boxes_normalized,
+                       'final_anchors': proposal_boxes_normalized,
+                       'weight_predictions': None}
+
+    if self._add_weight_as_output:
+      weight_predictions = box_predictions[box_predictor.WEIGHT_PREDICTIONS]
+      prediction_dict['weight_predictions'] = weight_predictions
 
     if self._return_raw_detections_during_predict:
       prediction_dict.update(self._raw_detections_and_feature_map_inds(
@@ -1437,7 +1440,8 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
             prediction_dict['proposal_scores'],
             prediction_dict['num_proposals'],
             true_image_shapes,
-            mask_predictions=mask_predictions)
+            mask_predictions=mask_predictions,
+            weight_predictions=prediction_dict['weight_predictions'])
 
       if self._output_final_box_features:
         if 'rpn_features_to_crop' not in prediction_dict:
@@ -1642,7 +1646,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
       proposal_boxes = tf.stop_gradient(proposal_boxes)
       if not self._hard_example_miner:
         (groundtruth_boxlists, groundtruth_classes_with_background_list, _,
-         groundtruth_weights_list
+         groundtruth_weights_list, _
         ) = self._format_groundtruth_data(image_shapes)
         (proposal_boxes, proposal_scores,
          num_proposals) = self._sample_box_classifier_batch(
@@ -1830,8 +1834,12 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
         groundtruth_weights = tf.ones(num_gt)
         groundtruth_weights_list.append(groundtruth_weights)
 
+    groundtruth_weightPerObject_list = None
+    if self.groundtruth_has_field(fields.InputDataFields.weightPerObject):
+      groundtruth_weightPerObject_list = self.groundtruth_lists(fields.InputDataFields.weightPerObject)
+
     return (groundtruth_boxlists, groundtruth_classes_with_background_list,
-            groundtruth_masks_list, groundtruth_weights_list)
+            groundtruth_masks_list, groundtruth_weights_list, groundtruth_weightPerObject_list)
 
   def _sample_box_classifier_minibatch_single_image(
       self, proposal_boxlist, num_valid_proposals, groundtruth_boxlist,
@@ -1930,6 +1938,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
                                   proposal_scores,
                                   num_proposals,
                                   image_shapes,
+                                  weight_predictions=None,
                                   mask_predictions=None):
     """Converts predictions from the second stage box classifier to detections.
 
@@ -1988,14 +1997,23 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
         class_predictions_with_background,
         [-1, self.max_num_proposals, self.num_classes + 1]
     )
+
+    # reshape weight_predictions if not None
+    weight_predictions_batch = None
+    if weight_predictions is not None:
+      weight_predictions = tf.identity(weight_predictions)
+      weight_predictions_batch = tf.reshape(
+        weight_predictions, [-1, self.max_num_proposals]
+      )
+
     refined_decoded_boxes_batch = self._batch_decode_boxes(
         refined_box_encodings_batch, proposal_boxes)
     class_predictions_with_background_batch_normalized = (
         self._second_stage_score_conversion_fn(
             class_predictions_with_background_batch))
 
-    ## Multiply class_predictions_with_background_batch_normalized with proposal_scores
-    if self._is_training == False:
+    # Multiply class_predictions_with_background_batch_normalized with proposal_scores
+    if not self._is_training:
       proposal_scores = tf.expand_dims(proposal_scores, -1)
       class_predictions_with_background_batch_normalized = \
           tf.sqrt(tf.multiply(class_predictions_with_background_batch_normalized, proposal_scores))
@@ -2023,6 +2041,10 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
         'multiclass_scores': class_predictions_with_background_batch_normalized,
         'anchor_indices': tf.cast(batch_anchor_indices, tf.float32)
     }
+
+    if weight_predictions_batch is not None:
+      additional_fields['detection_weightPerObject'] = weight_predictions_batch
+
     (nmsed_boxes, nmsed_scores, nmsed_classes, nmsed_masks,
      nmsed_additional_fields, num_detections) = self._second_stage_nms_fn(
          refined_decoded_boxes_batch,
@@ -2067,6 +2089,13 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     }
     if nmsed_masks is not None:
       detections[fields.DetectionResultFields.detection_masks] = nmsed_masks
+
+    if 'detection_weightPerObject' in nmsed_additional_fields:
+      detections[fields.DetectionResultFields.detection_weightPerObject] = \
+        nmsed_additional_fields['detection_weightPerObject']
+
+    print(detections)
+
     return detections
 
   def _batch_decode_boxes(self, box_encodings, anchor_boxes):
@@ -2162,7 +2191,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     """
     with tf.name_scope(scope, 'Loss', prediction_dict.values()):
       (groundtruth_boxlists, groundtruth_classes_with_background_list,
-       groundtruth_masks_list, groundtruth_weights_list
+       groundtruth_masks_list, groundtruth_weights_list, groundtruth_weightPerObject_list
       ) = self._format_groundtruth_data(
           self._image_batch_shape_2d(prediction_dict['image_shape']))
       loss_dict = self._loss_rpn(
@@ -2183,7 +2212,9 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
                 prediction_dict.get(
                     fields.DetectionResultFields.detection_boxes),
                 prediction_dict.get(
-                    fields.DetectionResultFields.num_detections)))
+                    fields.DetectionResultFields.num_detections),
+                weight_predictions=prediction_dict['weight_predictions'],
+                groundtruth_weightPerObject_list=groundtruth_weightPerObject_list))
     return loss_dict
 
   def _loss_rpn(self, rpn_box_encodings,
@@ -2289,7 +2320,9 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
                            prediction_masks=None,
                            groundtruth_masks_list=None,
                            detection_boxes=None,
-                           num_detections=None):
+                           num_detections=None,
+                           weight_predictions=None,
+                           groundtruth_weightPerObject_list=None):
     """Computes scalar box classifier loss tensors.
 
     Uses self._detector_target_assigner to obtain regression and classification
@@ -2431,6 +2464,26 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
           second_stage_cls_losses * tf.cast(paddings_indicator,
                                             dtype=tf.float32))
 
+      weightPerObject_loss = None
+      if weight_predictions is not None:
+        reshaped_weight_predictions = tf.reshape(
+          weight_predictions,
+          [batch_size, self.max_num_proposals, 1]
+        )
+        batch_weightPerObject = tf.expand_dims(tf.stack(groundtruth_weightPerObject_list), axis=1)
+        batch_weightPerObject = tf.repeat(batch_weightPerObject, repeats=self.max_num_proposals, axis=1)
+        batch_weightPerObject = tf.expand_dims(batch_weightPerObject, axis=2)
+
+        weightPerObject_losses = ops.reduce_sum_trailing_dimensions(
+                                  tf.losses.huber_loss(batch_weightPerObject,
+                                                      reshaped_weight_predictions,
+                                                      delta=1.0,
+                                                      weights=tf.expand_dims(batch_reg_weights, axis=2),
+                                                      loss_collection=None,
+                                                      reduction=tf.losses.Reduction.NONE), ndims=2) / normalizer
+
+        weightPerObject_loss = tf.reduce_sum(weightPerObject_losses * tf.cast(paddings_indicator, dtype=tf.float32))
+
       if self._hard_example_miner:
         (second_stage_loc_loss, second_stage_cls_loss
         ) = self._unpad_proposals_and_apply_hard_mining(
@@ -2448,6 +2501,10 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
                        localization_loss,
                    'Loss/BoxClassifierLoss/classification_loss':
                        classification_loss}
+
+      if weightPerObject_loss is not None:
+        loss_dict['Loss/BoxClassifierLoss/weightPerObject_loss'] = weightPerObject_loss
+
       second_stage_mask_loss = None
       if prediction_masks is not None:
         if groundtruth_masks_list is None:

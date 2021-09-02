@@ -1,6 +1,91 @@
 from object_detection.predictors.heads import head
 import tensorflow as tf
 
+
+class MaskRCNNWeightHead(head.KerasHead):
+  """
+  Weight prediction head.
+
+  """
+
+  def __init__(self,
+               is_training,
+               num_classes,
+               fc_hyperparams,
+               freeze_batchnorm,
+               use_dropout,
+               dropout_keep_prob,
+               name=None):
+    """Constructor.
+
+    Args:
+      is_training: Indicates whether the BoxPredictor is in training mode.
+      num_classes: number of classes.  Note that num_classes *does not*
+        include the background category, so if groundtruth labels take values
+        in {0, 1, .., K-1}, num_classes=K (and not K+1, even though the
+        assigned classification targets can range from {0,... K}).
+      fc_hyperparams: A `hyperparams_builder.KerasLayerHyperparams` object
+        containing hyperparameters for fully connected dense ops.
+      freeze_batchnorm: Whether to freeze batch norm parameters during
+        training or not. When training with a small batch size (e.g. 1), it is
+        desirable to freeze batch norm update and use pretrained batch norm
+        params.
+      use_dropout: Option to use dropout or not.  Note that a single dropout
+        op is applied here prior to both box and class predictions, which stands
+        in contrast to the ConvolutionalBoxPredictor below.
+      dropout_keep_prob: Keep probability for dropout.
+        This is only used if use_dropout is True.
+      share_box_across_classes: Whether to share boxes across classes rather
+        than use a different box for each class.
+      name: A string name scope to assign to the weight head. If `None`, Keras
+        will auto-generate one from the class name.
+    """
+    super(MaskRCNNWeightHead, self).__init__(name=name)
+    self._is_training = is_training
+    self._num_classes = num_classes
+    self._fc_hyperparams = fc_hyperparams
+    self._freeze_batchnorm = freeze_batchnorm
+    self._use_dropout = use_dropout
+    self._dropout_keep_prob = dropout_keep_prob
+
+    self._weight_predictor_layers = [tf.keras.layers.Flatten()]
+
+    if self._use_dropout:
+      self._weight_predictor_layers.append(
+          tf.keras.layers.Dropout(rate=1.0 - self._dropout_keep_prob))
+
+    self._number_of_boxes = 1
+
+    self._weight_predictor_layers.append(
+        tf.keras.layers.Dense(self._number_of_boxes * 1,
+                              name='WeightPredictor_dense'))
+    self._weight_predictor_layers.append(
+        fc_hyperparams.build_batch_norm(training=(is_training and
+                                                  not freeze_batchnorm),
+                                        name='WeightPredictor_batchnorm'))
+
+  def _predict(self, features):
+    """Predicts box encodings.
+
+    Args:
+      features: A float tensor of shape [batch_size, height, width,
+        channels] containing features for a batch of images.
+
+    Returns:
+      weight_predictions: A float tensor of shape
+        [batch_size, 1, 1] representing the weights of the
+        objects.
+    """
+    spatial_averaged_roi_pooled_features = tf.reduce_mean(
+        features, [1, 2], keepdims=True, name='AvgPool')
+    net = spatial_averaged_roi_pooled_features
+    for layer in self._weight_predictor_layers:
+      net = layer(net)
+    weight_predictions = tf.reshape(net,
+                               [-1, 1])
+    return weight_predictions
+
+
 class WeightSharedConvolutionalWeightHead(head.KerasHead):
 
 	def __init__(self,

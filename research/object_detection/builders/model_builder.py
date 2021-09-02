@@ -1000,7 +1000,8 @@ def _build_prob_two_stage_model(prob_two_stage_config, is_training, add_summarie
         num_predictions_per_location_list=[1],
         box_predictor_config=prob_two_stage_config.second_stage_box_predictor,
         is_training=is_training,
-        num_classes=num_classes)
+        num_classes=num_classes,
+        add_weight_as_output=add_weight_as_output)
   second_stage_batch_size = prob_two_stage_config.second_stage_batch_size
   second_stage_sampler = sampler.BalancedPositiveNegativeSampler(
       positive_fraction=prob_two_stage_config.second_stage_balance_fraction,

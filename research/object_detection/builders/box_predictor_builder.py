@@ -461,6 +461,7 @@ def build_mask_rcnn_keras_box_predictor(is_training,
                                         dropout_keep_prob,
                                         box_code_size,
                                         add_background_class=True,
+                                        add_weight_as_output=False,
                                         share_box_across_classes=False,
                                         predict_instance_masks=False,
                                         conv_hyperparams=None,
@@ -532,6 +533,16 @@ def build_mask_rcnn_keras_box_predictor(is_training,
       freeze_batchnorm=freeze_batchnorm,
       use_dropout=use_dropout,
       dropout_keep_prob=dropout_keep_prob)
+  weight_prediction_head = None
+  if add_weight_as_output:
+    weight_prediction_head = keras_weight_head.MaskRCNNWeightHead(
+      is_training=is_training,
+      num_classes=num_classes,
+      fc_hyperparams=fc_hyperparams,
+      freeze_batchnorm=freeze_batchnorm,
+      use_dropout=use_dropout,
+      dropout_keep_prob=dropout_keep_prob
+    )
   third_stage_heads = {}
   if predict_instance_masks:
     third_stage_heads[
@@ -553,6 +564,7 @@ def build_mask_rcnn_keras_box_predictor(is_training,
       freeze_batchnorm=freeze_batchnorm,
       box_prediction_head=box_prediction_head,
       class_prediction_head=class_prediction_head,
+      weight_prediction_head=weight_prediction_head,
       third_stage_heads=third_stage_heads)
 
 
@@ -965,6 +977,7 @@ def build_keras(hyperparams_fn, freeze_batchnorm, inplace_batchnorm_update,
         is_training=is_training,
         num_classes=num_classes,
         add_background_class=add_background_class,
+        add_weight_as_output=add_weight_as_output,
         fc_hyperparams=fc_hyperparams,
         freeze_batchnorm=freeze_batchnorm,
         use_dropout=config_box_predictor.use_dropout,
