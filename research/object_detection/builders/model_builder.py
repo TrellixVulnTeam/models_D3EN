@@ -146,9 +146,9 @@ if tf_version.is_tf2():
           frcnn_resnet_fpn_keras.FasterRCNNResnet152FpnKerasFeatureExtractor,
   }
 
-  PROBABILITY_TWO_STAGE_KERAS_FEATURE_EXTRACTOR_CLASS_MAP ={
-    'prob_two_stage_efficientdet_d0_bifpn_keras':
-      prob_two_stage_efficientnet_bifpn_feature_extractor.ProbabilisticTwoStageEfficientNetB0BiFPNKerasFeatureExtractor
+  PROBABILITY_TWO_STAGE_KERAS_FEATURE_EXTRACTOR_CLASS_MAP = {
+      'prob_two_stage_efficientdet_d0_bifpn_keras':
+          prob_two_stage_efficientnet_bifpn_feature_extractor.ProbabilisticTwoStageEfficientNetB0BiFPNKerasFeatureExtractor
   }
 
   CENTER_NET_EXTRACTOR_FUNCTION_MAP = {
@@ -398,10 +398,10 @@ def _build_ssd_model(ssd_config, is_training, add_summaries):
   num_classes = ssd_config.num_classes
   _check_feature_extractor_exists(ssd_config.feature_extractor.type)
 
-  add_weight_information = ssd_config.add_weight_information
-  weight_method = ssd_config.weight_method
-  add_weight_as_output = ssd_config.add_weight_as_output
-  add_weight_as_output_v2 = ssd_config.add_weight_as_output_v2
+  add_weight_as_input = ssd_config.add_weight_as_input
+  input_method = ssd_config.input_method
+  add_weight_as_output_gpo = ssd_config.add_weight_as_output_gpo
+  add_weight_as_output_gesamt = ssd_config.add_weight_as_output_gesamt
 
   # Feature extractor
   feature_extractor = _build_ssd_feature_extractor(
@@ -428,7 +428,7 @@ def _build_ssd_model(ssd_config, is_training, add_summaries):
         is_training=is_training,
         num_classes=num_classes,
         add_background_class=ssd_config.add_background_class,
-        add_weight_as_output=add_weight_as_output)
+        add_weight_as_output_gpo=add_weight_as_output_gpo)
   else:
     ssd_box_predictor = box_predictor_builder.build(
         hyperparams_builder.build, ssd_config.box_predictor, is_training,
@@ -457,10 +457,10 @@ def _build_ssd_model(ssd_config, is_training, add_summaries):
 
   return ssd_meta_arch_fn(
       is_training=is_training,
-      add_weight_information=add_weight_information,
-      weight_method=weight_method,
-      add_weight_as_output=add_weight_as_output,
-      add_weight_as_output_v2=add_weight_as_output_v2,
+      add_weight_as_input=add_weight_as_input,
+      input_method=input_method,
+      add_weight_as_output_gpo=add_weight_as_output_gpo,
+      add_weight_as_output_gesamt=add_weight_as_output_gesamt,
       anchor_generator=anchor_generator,
       box_predictor=ssd_box_predictor,
       box_coder=box_coder,
@@ -926,9 +926,9 @@ def _build_prob_two_stage_model(prob_two_stage_config, is_training, add_summarie
       model_class_map).
   """
   num_classes = prob_two_stage_config.num_classes
-  add_weight_information = prob_two_stage_config.add_weight_information
-  weight_method = prob_two_stage_config.weight_method
-  add_weight_as_output = prob_two_stage_config.add_weight_as_output
+  add_weight_as_input = prob_two_stage_config.add_weight_as_input
+  input_method = prob_two_stage_config.input_method
+  add_weight_as_output_gpo = prob_two_stage_config.add_weight_as_output_gpo
   image_resizer_fn = image_resizer_builder.build(prob_two_stage_config.image_resizer)
   _check_feature_extractor_exists(prob_two_stage_config.feature_extractor.type)
   is_keras = tf_version.is_tf2()
@@ -1001,7 +1001,7 @@ def _build_prob_two_stage_model(prob_two_stage_config, is_training, add_summarie
         box_predictor_config=prob_two_stage_config.second_stage_box_predictor,
         is_training=is_training,
         num_classes=num_classes,
-        add_weight_as_output=add_weight_as_output)
+        add_weight_as_output_gpo=add_weight_as_output_gpo)
   second_stage_batch_size = prob_two_stage_config.second_stage_batch_size
   second_stage_sampler = sampler.BalancedPositiveNegativeSampler(
       positive_fraction=prob_two_stage_config.second_stage_balance_fraction,
@@ -1038,12 +1038,12 @@ def _build_prob_two_stage_model(prob_two_stage_config, is_training, add_summarie
           is_training,
       'num_classes':
           num_classes,
-      'add_weight_information':
-          add_weight_information,
-      'weight_method':
-          weight_method,
-      'add_weight_as_output':
-          add_weight_as_output,
+      'add_weight_as_input':
+          add_weight_as_input,
+      'input_method':
+          input_method,
+      'add_weight_as_output_gpo':
+          add_weight_as_output_gpo,
       'image_resizer_fn':
           image_resizer_fn,
       'feature_extractor':

@@ -22,9 +22,10 @@ import copy
 import os
 import time
 import numpy as np
+import pickle
+from pathlib import Path
 
 from tensorflow.keras.backend import count_params
-from fruitod.utils.csv_util import write_metrics, write_loss_to_csv, write_eval_to_csv
 
 import tensorflow as tf
 
@@ -572,6 +573,19 @@ def train_loop(
     detection_model = MODEL_BUILD_UTIL_MAP['detection_model_fn_base'](
         model_config=model_config, is_training=True)
 
+    ## Get Number of Parameters and Name of the model
+    trainable_params = int(np.sum([count_params(p) for p in detection_model.trainable_weights]))
+    non_trainable_params = int(np.sum([count_params(p) for p in detection_model.non_trainable_weights]))
+    total_params = trainable_params + non_trainable_params
+    name = model_config['name']
+    name_params_dict = {'Parameter': trainable_params,
+                        'Name': name}
+    ## Save Trainable Params and Model Name to Pickle file
+    head, tail = os.path.split(str(model_dir))
+    pickle_save_path = Path(os.path.join(head, 'metrics'))
+    pickle_save_path.mkdir(parents=True, exist_ok=True)
+    pickle.dump(name_params_dict, open(os.path.join(pickle_save_path, 'name_params.pkl'), 'wb'))
+
     def train_dataset_fn(input_context):
       """Callable to create train input."""
       # Create the inputs.
@@ -711,8 +725,6 @@ def train_loop(
             loss_step_dict = {'global_step': global_step.value().numpy()}
             for loss_type in losses_dict:
               loss_step_dict[loss_type] = losses_dict[loss_type].numpy()
-            head, tail = os.path.split(str(model_dir))
-            write_loss_to_csv(head, loss_step_dict)
 
           time_taken = time.time() - last_step_time
           last_step_time = time.time()
@@ -753,15 +765,8 @@ def train_loop(
     mixed_precision = 'bf16' if kwargs['use_bfloat16'] else 'fp32'
     performance_summary_exporter(metrics, mixed_precision)
 
-  ## Get Number of Parameters and Flops of the model
-  trainable_params = int(np.sum([count_params(p) for p in detection_model.trainable_weights]))
-  non_trainable_params = int(np.sum([count_params(p) for p in detection_model.non_trainable_weights]))
-  total_params = trainable_params + non_trainable_params
 
-  ## Write Params to Dataframe/CSV
-  head, tail = os.path.split(str(model_dir))
-  metrics = {'Parameter': trainable_params}
-  write_metrics(head, metrics)
+
 
 
 def prepare_eval_dict(detections, groundtruth, features):
@@ -1231,10 +1236,6 @@ def eval_continuously(
           global_step=global_step,
           )
 
-      ## Write Metrics to Dataframe/CSV
-      head, tail = os.path.split(str(model_dir))
-      write_metrics(head, eval_metrics)
 
       eval_dict = eval_metrics
       eval_dict['global_step'] = global_step.value().numpy()
-      write_eval_to_csv(head, eval_dict)

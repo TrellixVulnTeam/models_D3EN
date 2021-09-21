@@ -324,7 +324,7 @@ def build_weight_shared_convolutional_keras_box_predictor(
     box_code_size,
     kernel_size=3,
     add_background_class=True,
-    add_weight_as_output=False,
+    add_weight_as_output_gpo=False,
     class_prediction_bias_init=0.0,
     use_dropout=False,
     dropout_keep_prob=0.8,
@@ -420,7 +420,7 @@ def build_weight_shared_convolutional_keras_box_predictor(
       score_converter_fn=score_converter_fn,
       name='WeightSharedConvolutionalClassHead')
   other_heads = {}
-  if add_weight_as_output:
+  if add_weight_as_output_gpo:
     other_heads['weight_predictions'] = keras_weight_head.WeightSharedConvolutionalWeightHead(
       num_predictions_per_location=num_predictions_per_location,
       conv_hyperparams=conv_hyperparams,
@@ -461,7 +461,7 @@ def build_mask_rcnn_keras_box_predictor(is_training,
                                         dropout_keep_prob,
                                         box_code_size,
                                         add_background_class=True,
-                                        add_weight_as_output=False,
+                                        add_weight_as_output_gpo=False,
                                         share_box_across_classes=False,
                                         predict_instance_masks=False,
                                         conv_hyperparams=None,
@@ -534,7 +534,7 @@ def build_mask_rcnn_keras_box_predictor(is_training,
       use_dropout=use_dropout,
       dropout_keep_prob=dropout_keep_prob)
   weight_prediction_head = None
-  if add_weight_as_output:
+  if add_weight_as_output_gpo:
     weight_prediction_head = keras_weight_head.MaskRCNNWeightHead(
       is_training=is_training,
       num_classes=num_classes,
@@ -844,7 +844,7 @@ def build(argscope_fn, box_predictor_config, is_training, num_classes,
 
 def build_keras(hyperparams_fn, freeze_batchnorm, inplace_batchnorm_update,
                 num_predictions_per_location_list, box_predictor_config,
-                is_training, num_classes, add_background_class=True, add_weight_as_output=False):
+                is_training, num_classes, add_background_class=True, add_weight_as_output_gpo=False):
   """Builds a Keras-based box predictor based on the configuration.
 
   Builds Keras-based box predictor based on the configuration.
@@ -940,7 +940,7 @@ def build_keras(hyperparams_fn, freeze_batchnorm, inplace_batchnorm_update,
     return build_weight_shared_convolutional_keras_box_predictor(
         is_training=is_training,
         num_classes=num_classes,
-        add_weight_as_output = add_weight_as_output,
+        add_weight_as_output_gpo=add_weight_as_output_gpo,
         conv_hyperparams=conv_hyperparams,
         freeze_batchnorm=freeze_batchnorm,
         inplace_batchnorm_update=inplace_batchnorm_update,
@@ -977,7 +977,7 @@ def build_keras(hyperparams_fn, freeze_batchnorm, inplace_batchnorm_update,
         is_training=is_training,
         num_classes=num_classes,
         add_background_class=add_background_class,
-        add_weight_as_output=add_weight_as_output,
+        add_weight_as_output_gpo=add_weight_as_output_gpo,
         fc_hyperparams=fc_hyperparams,
         freeze_batchnorm=freeze_batchnorm,
         use_dropout=config_box_predictor.use_dropout,

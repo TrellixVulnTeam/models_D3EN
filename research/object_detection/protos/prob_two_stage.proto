@@ -24,12 +24,12 @@ message ProbabilisticTwoStage {
   optional int32 number_of_stages = 1 [default = 2];
 
   // Wether to add Weight Information as Side Input to the model.
-  optional bool add_weight_information = 2 [default = false];
+  optional bool add_weight_as_input = 2 [default = false];
 
-  // Which version of weight method to use ('concat', 'input-multiply', 'fpn-multiply', 'predictor-multiply')
-  optional string weight_method = 44 [default = 'input-multiply'];
+  // Which version of weight method to use ('concat', 'input-multiply', 'fpn-multiply', 'roi-multiply')
+  optional string input_method = 44 [default = 'input-multiply'];
 
-  optional bool add_weight_as_output = 45 [default = false];
+  optional bool add_weight_as_output_gpo = 45 [default = false];
 
   // Number of classes to predict.
   optional int32 num_classes = 3;

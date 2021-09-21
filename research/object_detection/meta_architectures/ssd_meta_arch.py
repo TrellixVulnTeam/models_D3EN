@@ -274,10 +274,10 @@ class SSDMetaArch(model.DetectionModel):
                normalize_loss_by_num_matches,
                hard_example_miner,
                target_assigner_instance,
-               add_weight_information,
-               weight_method,
-               add_weight_as_output,
-               add_weight_as_output_v2,
+               add_weight_as_input,
+               input_method,
+               add_weight_as_output_gpo,
+               add_weight_as_output_gesamt,
                add_summaries=True,
                normalize_loc_loss_by_codesize=False,
                freeze_batchnorm=False,
@@ -385,10 +385,10 @@ class SSDMetaArch(model.DetectionModel):
     self._add_background_class = add_background_class
     self._explicit_background_class = explicit_background_class
 
-    self._add_weight_information = add_weight_information
-    self._weight_method = weight_method
-    self._add_weight_as_output = add_weight_as_output
-    self._add_weight_as_output_v2 = add_weight_as_output_v2
+    self._add_weight_as_input = add_weight_as_input
+    self._input_method = input_method
+    self._add_weight_as_output_gpo = add_weight_as_output_gpo
+    self._add_weight_as_output_gesamt = add_weight_as_output_gesamt
 
     if add_background_class and explicit_background_class:
       raise ValueError("Cannot have both 'add_background_class' and"
@@ -447,7 +447,7 @@ class SSDMetaArch(model.DetectionModel):
         return_raw_detections_during_predict)
 
     self._weight_predictor = None
-    if self._add_weight_as_output_v2:
+    if self._add_weight_as_output_gesamt:
       self._weight_predictor = tf.keras.models.Sequential([
         tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
         tf.keras.layers.Flatten(),
@@ -612,14 +612,14 @@ class SSDMetaArch(model.DetectionModel):
     else:
       batchnorm_updates_collections = tf.GraphKeys.UPDATE_OPS
 
-    if self._add_weight_information and self._weight_method == 'input-multiply':
+    if self._add_weight_as_input and self._input_method == 'input-multiply':
       preprocessed_inputs = self._multiply_input_with_weight_feature(preprocessed_inputs, **side_inputs)
 
     feature_maps, base_feature_maps = self._feature_extractor(preprocessed_inputs)
-    if self._add_weight_as_output_v2:
+    if self._add_weight_as_output_gesamt:
       weights = self._weight_predictor(base_feature_maps[-1])
 
-    if self._add_weight_information and self._weight_method == 'fpn-multiply':
+    if self._add_weight_as_input and self._input_method == 'fpn-multiply':
       feature_maps = self._multiply_fpn_features_with_weight_feature(feature_maps, **side_inputs)
 
     feature_map_spatial_dims = self._get_feature_map_spatial_dims(
@@ -645,7 +645,7 @@ class SSDMetaArch(model.DetectionModel):
                 tf.expand_dims(self._anchors.get(), 0), [image_shape[0], 1, 1])
     }
 
-    if self._add_weight_as_output_v2:
+    if self._add_weight_as_output_gesamt:
       predictions_dict['weight_predictions_v2'] = weights
 
     for prediction_key, prediction_list in iter(predictor_results_dict.items()):
@@ -953,7 +953,7 @@ class SSDMetaArch(model.DetectionModel):
           weights=batch_cls_weights,
           losses_mask=losses_mask)
 
-      if self._add_weight_as_output:
+      if self._add_weight_as_output_gpo:
         batch_weightPerObject = None
         if self.groundtruth_has_field(fields.InputDataFields.weightPerObject):
           weightPerObject_list = self.groundtruth_lists(fields.InputDataFields.weightPerObject)
@@ -969,7 +969,7 @@ class SSDMetaArch(model.DetectionModel):
 
         weightPerObject_loss = tf.reduce_sum(weightPerObject_losses)
 
-      if self._add_weight_as_output_v2:
+      if self._add_weight_as_output_gesamt:
         batch_weightScaled = None
         if self.groundtruth_has_field(fields.InputDataFields.weightScaled):
           weightScaled_list = self.groundtruth_lists(fields.InputDataFields.weightScaled)
@@ -1056,10 +1056,10 @@ class SSDMetaArch(model.DetectionModel):
           'Loss/classification_loss': classification_loss
       }
 
-      if self._add_weight_as_output:
+      if self._add_weight_as_output_gpo:
         loss_dict['Loss/weightPerObject_loss'] = tf.multiply((1.0 / normalizer), weightPerObject_loss)
 
-      if self._add_weight_as_output_v2:
+      if self._add_weight_as_output_gesamt:
         loss_dict['Loss/weightsV2_loss'] = weightsV2_loss
 
 

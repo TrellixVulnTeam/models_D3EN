@@ -119,7 +119,7 @@ _UNINITIALIZED_FEATURE_EXTRACTOR = '__uninitialized__'
 
 
 class ProbabilisticTwoStageKerasFeatureExtractor(object):
-  """Keras-based Faster R-CNN Feature Extractor definition."""
+  """Keras-based Probabilistic-Two-Stage Feature Extractor definition."""
 
   def __init__(self,
                is_training,
@@ -159,14 +159,14 @@ class ProbabilisticTwoStageKerasFeatureExtractor(object):
 
 
 class ProbabilisticTwoStageMetaArch(model.DetectionModel):
-  """Faster R-CNN Meta-architecture definition."""
+  """Probabilistic-Two-Stage Meta-architecture definition."""
 
   def __init__(self,
                is_training,
                num_classes,
-               add_weight_information,
-               weight_method,
-               add_weight_as_output,
+               add_weight_as_input,
+               input_method,
+               add_weight_as_output_gpo,
                image_resizer_fn,
                feature_extractor,
                number_of_stages,
@@ -203,7 +203,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
                return_raw_detections_during_predict=False,
                output_final_box_features=False,
                output_final_box_rpn_features=False):
-    """FasterRCNNMetaArch Constructor.
+    """ProbabilisticTwoStageMetaArch Constructor.
 
     Args:
       is_training: A boolean indicating whether the training version of the
@@ -282,7 +282,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
       maxpool_stride: A single integer indicating the stride of the max pool
         op on the cropped feature map during ROI pooling.
       second_stage_target_assigner: Target assigner to use for second stage of
-        Faster R-CNN. If the model is configured with multiple prediction heads,
+        Probabilistic-Two-Stage. If the model is configured with multiple prediction heads,
         this target assigner is used to generate targets for all heads (with the
         correct `unmatched_class_label`).
       second_stage_mask_rcnn_box_predictor: Mask R-CNN box predictor to use for
@@ -352,9 +352,9 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     super(ProbabilisticTwoStageMetaArch, self).__init__(num_classes=num_classes)
 
     self._is_training = is_training
-    self._add_weight_information = add_weight_information
-    self._weight_method = weight_method
-    self._add_weight_as_output = add_weight_as_output
+    self._add_weight_as_input = add_weight_as_input
+    self._input_method = input_method
+    self._add_weight_as_output_gpo = add_weight_as_output_gpo
     self._image_resizer_fn = image_resizer_fn
     self._resize_masks = resize_masks
     self._feature_extractor = feature_extractor
@@ -913,14 +913,16 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
             rpn_features_to_crop, proposal_boxes_normalized,
             image_shape, **side_inputs))
 
-    if self._add_weight_information and self._weight_method == 'predictor-multiply':
+    print(flattened_proposal_feature_maps)
+
+    if self._add_weight_as_input and self._input_method == 'roi-multiply':
       flattened_proposal_feature_maps = self._multiply_features_with_weights_for_box_classifier_extractor(
           flattened_proposal_feature_maps, **side_inputs)
 
     box_classifier_features = self._extract_box_classifier_features(
         flattened_proposal_feature_maps, **side_inputs)
 
-    if self._add_weight_information and self._weight_method == 'concat':
+    if self._add_weight_as_input and self._input_method == 'concat':
       box_classifier_features = self._concat_weights_to_features(box_classifier_features, **side_inputs)
 
     if self._mask_rcnn_box_predictor.is_keras_model:
@@ -954,7 +956,7 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
                        'final_anchors': proposal_boxes_normalized,
                        'weight_predictions': None}
 
-    if self._add_weight_as_output:
+    if self._add_weight_as_output_gpo:
       weight_predictions = box_predictions[box_predictor.WEIGHT_PREDICTIONS]
       prediction_dict['weight_predictions'] = weight_predictions
 
@@ -1192,13 +1194,13 @@ class ProbabilisticTwoStageMetaArch(model.DetectionModel):
     """
     image_shape = tf.shape(preprocessed_inputs)
 
-    if self._add_weight_information and self._weight_method == 'input-multiply':
+    if self._add_weight_as_input and self._input_method == 'input-multiply':
       preprocessed_inputs = self._multiply_input_with_weight_feature(preprocessed_inputs, **side_inputs)
 
     rpn_features_to_crop, self.endpoints = self._extract_proposal_features(
         preprocessed_inputs)
 
-    if self._add_weight_information and self._weight_method == 'rpn-multiply':
+    if self._add_weight_as_input and self._input_method == 'fpn-multiply':
       rpn_features_to_crop = self._multiply_rpn_features_with_weight_feature(rpn_features_to_crop, **side_inputs)
 
     # Decide if rpn_features_to_crop is a list. If not make it a list
