@@ -533,6 +533,12 @@ def train_loop(
       'train_steps': train_steps,
       'use_bfloat16': configs['train_config'].use_bfloat16 and use_tpu
   })
+
+  # Read Name from config and add to config
+  model_name = configs['model'].name
+  name_params_dict = {'Parameter': 0,
+                      'Name': model_name}
+
   configs = merge_external_params_with_configs(
       configs, None, kwargs_dict=kwargs)
   model_config = configs['model']
@@ -572,19 +578,6 @@ def train_loop(
   with strategy.scope():
     detection_model = MODEL_BUILD_UTIL_MAP['detection_model_fn_base'](
         model_config=model_config, is_training=True)
-
-    ## Get Number of Parameters and Name of the model
-    trainable_params = int(np.sum([count_params(p) for p in detection_model.trainable_weights]))
-    non_trainable_params = int(np.sum([count_params(p) for p in detection_model.non_trainable_weights]))
-    total_params = trainable_params + non_trainable_params
-    name = model_config['name']
-    name_params_dict = {'Parameter': trainable_params,
-                        'Name': name}
-    ## Save Trainable Params and Model Name to Pickle file
-    head, tail = os.path.split(str(model_dir))
-    pickle_save_path = Path(os.path.join(head, 'metrics'))
-    pickle_save_path.mkdir(parents=True, exist_ok=True)
-    pickle.dump(name_params_dict, open(os.path.join(pickle_save_path, 'name_params.pkl'), 'wb'))
 
     def train_dataset_fn(input_context):
       """Callable to create train input."""
@@ -765,8 +758,19 @@ def train_loop(
     mixed_precision = 'bf16' if kwargs['use_bfloat16'] else 'fp32'
     performance_summary_exporter(metrics, mixed_precision)
 
+  ## Get Number of Parameters of the model
+  trainable_params = int(np.sum([count_params(p) for p in detection_model.trainable_weights]))
+  non_trainable_params = int(np.sum([count_params(p) for p in detection_model.non_trainable_weights]))
+  total_params = trainable_params + non_trainable_params
 
+  # Update name_params_dict
+  name_params_dict['Parameter'] = trainable_params
 
+  ## Save Trainable Params and Model Name to Pickle file
+  head, tail = os.path.split(str(model_dir))
+  pickle_save_path = Path(os.path.join(head, 'metrics'))
+  pickle_save_path.mkdir(parents=True, exist_ok=True)
+  pickle.dump(name_params_dict, open(os.path.join(pickle_save_path, 'name_params.pkl'), 'wb'))
 
 
 def prepare_eval_dict(detections, groundtruth, features):
